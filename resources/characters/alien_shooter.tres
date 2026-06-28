@@ -1,0 +1,27 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+character_class = 5
+starting_health = 60.0
+starting_speed = 210.0
+base_followers = 1
+max_followers = 3
+can_heal_self = false
+heal_rate = 0.0
+laser_damage_multiplier = 1.0
+melee_damage_multiplier = 0.7
+ranged_damage_multiplier = 1.5
+summon_damage_multiplier = 1.0
+spray_damage_multiplier = 0.7
+strength = 3
+agility = 8
+intelligence = 5
+constitution = 3
+luck = 5
+willpower = 5
+id = "alien_shooter"
+name = "外星射手"
+build_direction = 0
+initial_weapon_id = "rifle"
+description = "章鱼状外星人，4条触手握持武器。远程伤害+50%，吞噬尸块回血。"
+limb_slots = [0]

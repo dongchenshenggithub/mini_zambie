@@ -1,0 +1,22 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+id = "drone"
+weapon_path = "res://scripts/weapons/summon/weapon_drone.gd"
+name = "无人机"
+category = 9
+attack_type = 2
+damage = 5.0
+fire_rate = 3.0
+range = 250.0
+weapon_weight = 2
+crit_chance = 0.05
+crit_multiplier = 2.0
+pierce = 0
+splash_radius = 0.0
+effect = 0
+effect_duration = 0.0
+max_durability = 100.0
+durability_decay_rate = 1.0
+rarity = 0
+soul_cost = 5

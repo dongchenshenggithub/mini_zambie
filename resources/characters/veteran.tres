@@ -1,0 +1,27 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+character_class = 0
+starting_health = 100.0
+starting_speed = 200.0
+base_followers = 2
+max_followers = 4
+can_heal_self = true
+heal_rate = 2.0
+laser_damage_multiplier = 1.0
+melee_damage_multiplier = 1.0
+ranged_damage_multiplier = 1.0
+summon_damage_multiplier = 1.0
+spray_damage_multiplier = 1.0
+strength = 5
+agility = 5
+intelligence = 5
+constitution = 5
+luck = 5
+willpower = 5
+id = "veteran"
+name = "退伍老兵昊京"
+build_direction = 0
+initial_weapon_id = "rifle"
+description = "全能型选手，任何武器都能用。可带2个随从，人类，可缓慢自愈。"
+limb_slots = [2, 3, 4, 5]

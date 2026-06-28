@@ -1,0 +1,27 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+character_class = 4
+starting_health = 90.0
+starting_speed = 180.0
+base_followers = 1
+max_followers = 3
+can_heal_self = true
+heal_rate = 1.0
+laser_damage_multiplier = 2.0
+melee_damage_multiplier = 0.8
+ranged_damage_multiplier = 1.0
+summon_damage_multiplier = 1.0
+spray_damage_multiplier = 1.3
+strength = 4
+agility = 5
+intelligence = 8
+constitution = 5
+luck = 5
+willpower = 7
+id = "professor"
+name = "大学教授"
+build_direction = 3
+initial_weapon_id = "laser_heal"
+description = "激光武器伤害翻倍。可放置固定炮台和治疗塔。"
+limb_slots = [2, 3, 4, 5]

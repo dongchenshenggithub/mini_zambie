@@ -1,0 +1,22 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+id = "flame"
+weapon_path = "res://scripts/weapons/spray/weapon_flame.gd"
+name = "火焰喷射器"
+category = 10
+attack_type = 3
+damage = 6.0
+fire_rate = 5.0
+range = 100.0
+weapon_weight = 5
+crit_chance = 0.05
+crit_multiplier = 2.0
+pierce = 0
+splash_radius = 0.0
+effect = 1
+effect_duration = 3.0
+max_durability = 100.0
+durability_decay_rate = 1.0
+rarity = 0
+soul_cost = 5

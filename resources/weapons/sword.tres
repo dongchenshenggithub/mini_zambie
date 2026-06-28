@@ -1,0 +1,22 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+id = "sword"
+weapon_path = "res://scripts/weapons/melee/weapon_chainsaw.gd"
+name = "飞剑"
+category = 2
+attack_type = 1
+damage = 15.0
+fire_rate = 4.0
+range = 60.0
+weapon_weight = 2
+crit_chance = 0.05
+crit_multiplier = 2.0
+pierce = 0
+splash_radius = 0.0
+effect = 0
+effect_duration = 0.0
+max_durability = 100.0
+durability_decay_rate = 1.0
+rarity = 0
+soul_cost = 5

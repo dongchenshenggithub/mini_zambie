@@ -1,0 +1,8 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Resource" path="res://scripts/weapon_data.gd" id="1_weapon_data"]
+
+[resource]
+id = "__template__"
+weapon_path = "res://scripts/weapons/__template__.gd"
+name = "Template"

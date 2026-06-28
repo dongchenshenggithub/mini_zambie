@@ -1,0 +1,22 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+id = "rifle"
+weapon_path = "res://scripts/weapons/ranged/weapon_rifle.gd"
+name = "精准步枪"
+category = 0
+attack_type = 0
+damage = 25.0
+fire_rate = 0.8
+range = 400.0
+weapon_weight = 2
+crit_chance = 0.25
+crit_multiplier = 2.5
+pierce = 2
+splash_radius = 0.0
+effect = 0
+effect_duration = 0.0
+max_durability = 100.0
+durability_decay_rate = 1.0
+rarity = 0
+soul_cost = 5
