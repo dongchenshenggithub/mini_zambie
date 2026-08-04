@@ -17,6 +17,7 @@ var _toast_label: Label = null
 var _toast_timer: float = 0.0
 var _weapon_icons: HBoxContainer = null
 var _last_weapon_sig: String = ""
+var _floor_timer_label: Label = null
 
 
 func _ready() -> void:
@@ -48,6 +49,16 @@ func _ready() -> void:
 	panel.add_child(_weapon_icons)
 	if bottom_bar:
 		bottom_bar.add_child(panel)
+
+	# Top-center survive-timer (survive-mode floors) / BOSS banner.
+	_floor_timer_label = Label.new()
+	_floor_timer_label.name = "FloorTimerLabel"
+	_floor_timer_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_floor_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_floor_timer_label.offset_top = 8.0
+	_floor_timer_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.4, 1.0))
+	_floor_timer_label.add_theme_font_size_override("font_size", 20)
+	add_child(_floor_timer_label)
 
 
 ## Briefly show a message near the top-center (used for pickups, etc.).
@@ -81,6 +92,14 @@ func _process(delta: float) -> void:
 		wave_label.text = "波次: %d" % Game.current_wave
 	if level_label:
 		level_label.text = "等级: %d" % Game.current_level
+
+	if _floor_timer_label:
+		if get_tree().get_nodes_in_group("boss").size() > 0:
+			_floor_timer_label.text = "BOSS 战 — 击败它！"
+		else:
+			var ws = get_tree().get_first_node_in_group("wave_spawner") as WaveSpawner
+			if ws:
+				_floor_timer_label.text = "存活时间: %.0f s" % ws.get_time_remaining()
 
 	if player and player.inventory:
 		var dur_text := ""

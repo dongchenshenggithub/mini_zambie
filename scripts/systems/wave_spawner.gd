@@ -26,13 +26,17 @@ const BossExperimentAlphaScript = preload("res://scripts/entities/zombie/boss_ex
 @export var max_zombies_on_screen: int = 30
 @export var spawn_radius_min: float = 400.0
 @export var spawn_radius_max: float = 600.0
-@export var waves_per_floor: int = 3
+## Survive-mode: a floor ends when this many seconds have elapsed — NOT when a
+## fixed number of zombies is killed. Waves keep spawning indefinitely until the
+## timer runs out (difficulty escalates, capped by max_zombies_on_screen).
+@export var floor_duration: float = 90.0
 
 var _spawn_timer: float = 0.0
 var _wave_number: int = 0
 var _is_waving: bool = false
 var _waves_this_floor: int = 0
 var _floor_active: bool = false
+var _floor_time: float = 0.0
 
 
 signal wave_started(wave_num: int)
@@ -40,24 +44,40 @@ signal wave_cleared(wave_num: int)
 signal floor_cleared(floor_num: int)
 
 
+func _ready() -> void:
+	add_to_group("wave_spawner")
+
+
+func get_time_remaining() -> float:
+	return maxf(0.0, floor_duration - _floor_time)
+
+
+func get_floor_progress() -> float:
+	return clampf(_floor_time / floor_duration, 0.0, 1.0)
+
+
 func _physics_process(delta: float) -> void:
 	if not (_is_waving and _floor_active):
 		return
 
-	# Once every wave for this floor has been spawned, wait for the player to
-	# clear the screen before signalling the floor as complete.
-	if _waves_this_floor >= waves_per_floor:
-		if get_tree().get_nodes_in_group("zombie").size() == 0:
-			_floor_active = false
-			floor_cleared.emit(Game.current_floor)
+	_floor_time += delta
+
+	# Survive-mode: keep spawning waves on the interval until the floor timer
+	# expires. Difficulty escalates with the within-floor wave count plus the
+	# current floor, and is capped by max_zombies_on_screen. The floor ends on
+	# the timer, NOT when the screen is cleared.
+	if _floor_time < floor_duration:
+		_spawn_timer -= delta
+		if _spawn_timer <= 0.0:
+			var player = get_tree().get_first_node_in_group("player") as Player
+			if player and get_tree().get_nodes_in_group("zombie").size() < max_zombies_on_screen:
+				spawn_wave()
+			_spawn_timer = spawn_interval
 		return
 
-	_spawn_timer -= delta
-	if _spawn_timer <= 0:
-		var player = get_tree().get_first_node_in_group("player") as Player
-		if player and get_tree().get_nodes_in_group("zombie").size() < max_zombies_on_screen:
-			spawn_wave()
-		_spawn_timer = spawn_interval
+	# Timer elapsed: the floor is cleared regardless of remaining zombies.
+	_floor_active = false
+	floor_cleared.emit(Game.current_floor)
 
 
 func start_waving() -> void:
@@ -68,6 +88,9 @@ func start_waving() -> void:
 
 func start_floor() -> void:
 	_waves_this_floor = 0
+	_wave_number = 0
+	_floor_time = 0.0
+	_spawn_timer = 0.0
 	_floor_active = true
 
 
@@ -81,12 +104,17 @@ func spawn_wave() -> void:
 	_waves_this_floor += 1
 	wave_started.emit(_wave_number)
 	Game.advance_wave()
+	# Difficulty scales with the within-floor wave count AND the current floor,
+	# so later floors start meaner. The on-screen count still caps at
+	# max_zombies_on_screen.
+	var floor_offset := (Game.current_floor - 1) * 3
+	var diff_wave := _wave_number + floor_offset
 	var count = minf(zombies_per_wave + _wave_number, max_zombies_on_screen)
 	var player = get_tree().get_first_node_in_group("player") as Player
 	if not player:
 		return
 	for i in range(count):
-		var zombie = create_zombie(_roll_zombie_type(_wave_number))
+		var zombie = create_zombie(_roll_zombie_type(diff_wave))
 		if zombie:
 			var angle = randf() * TAU
 			var dist = randf_range(spawn_radius_min, spawn_radius_max)
