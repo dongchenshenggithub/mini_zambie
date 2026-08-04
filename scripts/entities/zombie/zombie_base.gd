@@ -3,6 +3,11 @@
 class_name ZombieBase
 extends CharacterBody2D
 
+const LimbRegistry = preload("res://scripts/systems/limb_registry.gd")
+const AccessoryRegistry = preload("res://scripts/systems/accessory_registry.gd")
+const PixelLoader = preload("res://scripts/core/pixel_loader.gd")
+const PickupItemScript = preload("res://scripts/gameplay/pickup_item.gd")
+
 @export var base_health: float = 100.0
 @export var base_speed: float = 50.0
 @export var base_damage: float = 10.0
@@ -12,6 +17,7 @@ extends CharacterBody2D
 var current_health: float = 0.0
 var current_speed: float = 0.0
 var current_damage: float = 0.0
+var _base_modulate: Color = Color.WHITE
 
 var state: State = State.CHASE
 var target_player: Player = null
@@ -26,15 +32,53 @@ func _ready() -> void:
 	current_speed = base_speed
 	current_damage = base_damage
 	_setup_visuals()
+	_setup_collision()
+
+
+## Zombies need a collision shape so bullet Area2Ds can detect them via
+## body_entered. We keep collision_mask = 0 so they do NOT physically push
+## each other / the player (preserving the current free-movement feel) — they
+## remain detectable because detection uses the Area's mask vs this body's
+## layer, which is untouched (layer 1).
+func _setup_collision() -> void:
+	var body := CollisionShape2D.new()
+	body.name = "Body"
+	var shape := CircleShape2D.new()
+	shape.radius = 14.0
+	body.shape = shape
+	collision_layer = 1
+	collision_mask = 0
+	add_child(body)
 
 
 func _setup_visuals() -> void:
-	var vis = ColorRect.new()
-	vis.position = Vector2(-12, -12)
-	vis.size = Vector2(24, 24)
-	vis.color = _get_zombie_color()
-	vis.name = "Visual"
-	add_child(vis)
+	var spr = Sprite2D.new()
+	spr.texture = PixelLoader.load_texture(_get_zombie_texture_path())
+	spr.name = "Visual"
+	if spr.texture != null:
+		var target := 24.0
+		spr.scale = Vector2(target / spr.texture.get_width(), target / spr.texture.get_height())
+	if zombie_type == GameEnums.ZombieType.HOLOGRAM:
+		# Baked scanline alpha already makes it translucent; tint cyan for projection look.
+		spr.modulate = Color(0.7, 1.0, 1.0, 0.85)
+	_base_modulate = spr.modulate
+	add_child(spr)
+
+
+func _get_zombie_texture_path() -> String:
+	match zombie_type:
+		GameEnums.ZombieType.NORMAL: return "res://assets/pixel/zombie_normal.png"
+		GameEnums.ZombieType.FAST: return "res://assets/pixel/zombie_fast.png"
+		GameEnums.ZombieType.TANK: return "res://assets/pixel/zombie_tank.png"
+		GameEnums.ZombieType.SELF_DESTRUCT: return "res://assets/pixel/zombie_self.png"
+		GameEnums.ZombieType.MECHA_MUTANT: return "res://assets/pixel/zombie_mecha_mutant.png"
+		GameEnums.ZombieType.BIO_SHIELD: return "res://assets/pixel/zombie_bio_shield.png"
+		GameEnums.ZombieType.NANOMITE: return "res://assets/pixel/zombie_nanomite.png"
+		GameEnums.ZombieType.HOLOGRAM: return "res://assets/pixel/zombie_hologram.png"
+		GameEnums.ZombieType.ELITE_BIO_TYRANT: return "res://assets/pixel/zombie_elite_bio_tyrant.png"
+		GameEnums.ZombieType.ELITE_MECHA_SOLDIER: return "res://assets/pixel/zombie_elite_mecha_soldier.png"
+		GameEnums.ZombieType.ELITE_GENE_FUSION: return "res://assets/pixel/zombie_elite_gene_fusion.png"
+		_: return "res://assets/pixel/zombie_normal.png"
 
 
 func _get_zombie_color() -> Color:
@@ -116,58 +160,73 @@ func take_damage(amount: float) -> void:
 		die()
 
 
+## Quick white/red flash so the player sees a bullet connect.
+func flash_hit() -> void:
+	var vis = get_node_or_null("Visual")
+	if vis == null:
+		return
+	vis.modulate = Color(1.0, 0.4, 0.4, 1.0)
+	var tw := create_tween()
+	tw.tween_property(vis, "modulate", _base_modulate, 0.12)
+
+
 func die() -> void:
 	var xp_sys = get_tree().get_first_node_in_group("xp_system") as XPSystem
 	if xp_sys:
 		xp_sys.gain_xp(xp_reward)
 	Game.score += xp_reward
+	Game.kills += 1
+	SfxManager.play("enemy_die")
+	# Notify the player's class behavior (e.g. Alien Shooter heals on kills).
+	if target_player and target_player.behavior:
+		target_player.behavior.on_zombie_die(self)
 	_drop_loot()
 	queue_free()
 
 
 func _drop_loot() -> void:
-	"""Drop soul orbs, potions, weapons, accessories, parts."""
+	"""Drop soul orbs always, plus random potions / weapons / equipment.
+	Weapons and equipment (accessories + prosthetic limbs) come ONLY from
+	drops — level-ups are attribute-only. The PickupItem script is
+	instantiated directly (not via a .tscn) so drops work regardless of the
+	editor's import-cache state for the scene files."""
 	var scene = get_tree().current_scene
-	if scene:
-		# Soul orbs always drop
-		var orb = preload("res://scenes/gameplay/soul_orb.tscn").instantiate()
-		orb.global_position = global_position
-		scene.add_child(orb)
+	if scene == null:
+		return
+	# Soul orbs always drop.
+	var orb = preload("res://scenes/gameplay/soul_orb.tscn").instantiate()
+	orb.global_position = global_position
+	scene.add_child(orb)
 
-		# Random drops
-		var roll = randf()
-		if roll < 0.2:
-			_drop_potion(scene)
-		elif roll < 0.25:
-			_drop_weapon(scene)
-		elif roll < 0.30:
-			_drop_accessory(scene)
-		elif roll < 0.40:
-			_drop_parts(scene)
-
-
-func _drop_potion(scene: Node) -> void:
-	var potion = preload("res://scenes/gameplay/potion.tscn").instantiate()
-	potion.global_position = global_position + Vector2(randf_range(-20, 20), randf_range(-20, 20))
-	scene.add_child(potion)
+	# Random drops. Equipment (weapon+accessory+parts) = 45% of kills.
+	var roll = randf()
+	if roll < 0.12:
+		_add_drop(scene, PickupItemScript.ItemType.POTION)
+	elif roll < 0.27:
+		_add_drop(scene, PickupItemScript.ItemType.WEAPON)
+	elif roll < 0.42:
+		_add_drop(scene, PickupItemScript.ItemType.ACCESSORY)
+	elif roll < 0.57:
+		_add_drop(scene, PickupItemScript.ItemType.PARTS)
 
 
-func _drop_weapon(scene: Node) -> void:
-	var weapon = preload("res://scenes/gameplay/weapon_drop.tscn").instantiate()
-	weapon.global_position = global_position + Vector2(randf_range(-20, 20), randf_range(-20, 20))
-	scene.add_child(weapon)
-
-
-func _drop_accessory(scene: Node) -> void:
-	var accessory = preload("res://scenes/gameplay/accessory_drop.tscn").instantiate()
-	accessory.global_position = global_position + Vector2(randf_range(-20, 20), randf_range(-20, 20))
-	scene.add_child(accessory)
-
-
-func _drop_parts(scene: Node) -> void:
-	var parts = preload("res://scenes/gameplay/parts_drop.tscn").instantiate()
-	parts.global_position = global_position + Vector2(randf_range(-20, 20), randf_range(-20, 20))
-	scene.add_child(parts)
+## Spawn a PickupItem of the given type at a slight random offset. Accessories
+## and parts get a random definition attached so pickup actually applies it.
+func _add_drop(scene: Node, type: int) -> void:
+	var drop = PickupItemScript.new()
+	drop.item_type = type
+	drop.global_position = global_position + Vector2(randf_range(-20, 20), randf_range(-20, 20))
+	if type == PickupItemScript.ItemType.ACCESSORY:
+		var all = AccessoryRegistry.get_all()
+		if not all.is_empty():
+			var data: AccessoryData = all[randi() % all.size()]
+			drop.accessory_data = data
+			drop.rarity = data.rarity
+	elif type == PickupItemScript.ItemType.PARTS:
+		drop.limb = LimbRegistry.get_random()
+		if drop.limb != null:
+			drop.rarity = drop.limb.rarity
+	scene.add_child(drop)
 
 
 func apply_status(effect: GameEnums.StatusEffect, duration: float) -> void:

@@ -1,4 +1,6 @@
-## Upgrade picker — generates character-specific upgrade options when player levels up.
+## Upgrade picker — generates attribute-only upgrade options when the player levels up.
+## Weapons and equipment are NOT offered here; they come from monster drops
+## (see zombie_base._drop_loot + pickup_item.gd). Level-ups are pure stat growth.
 class_name UpgradePicker
 extends Node
 
@@ -6,47 +8,51 @@ signal upgrade_selected(upgrade_data: Dictionary)
 
 enum UpgradeKind {
 	HEALTH, STRENGTH, AGILITY, INTELLIGENCE, CONSTITUTION, LUCK, WILLPOWER,
-	WEAPON_DAMAGE, WEAPON_FIRE_RATE, WEAPON_RANGE, ITEM, SOUL_ORB_BONUS,
 }
 
-const UPGRADES: Array[Dictionary] = [
-	{"kind": UpgradeKind.HEALTH, "label": "生命 +[2~6]", "stat": "max_health", "value": 0.15},
-	{"kind": UpgradeKind.STRENGTH, "label": "力量 +[2~6]", "stat": "strength", "value": 1},
-	{"kind": UpgradeKind.AGILITY, "label": "敏捷 +[2~6]", "stat": "agility", "value": 1},
-	{"kind": UpgradeKind.INTELLIGENCE, "label": "智力 +[2~6]", "stat": "intelligence", "value": 1},
-	{"kind": UpgradeKind.CONSTITUTION, "label": "体质 +[2~6]", "stat": "constitution", "value": 1},
-	{"kind": UpgradeKind.LUCK, "label": "幸运 +[2~6]", "stat": "luck", "value": 1},
-	{"kind": UpgradeKind.WILLPOWER, "label": "意志 +[2~6]", "stat": "willpower", "value": 1},
+# Attribute upgrade definitions. "attr" maps to a CharacterEntry exported field
+# (so apply_upgrade can write the new value back); "label" is the display prefix.
+const ATTR_UPGRADES: Array[Dictionary] = [
+	{"kind": UpgradeKind.HEALTH, "label": "生命"},
+	{"kind": UpgradeKind.STRENGTH, "label": "力量", "attr": "strength"},
+	{"kind": UpgradeKind.AGILITY, "label": "敏捷", "attr": "agility"},
+	{"kind": UpgradeKind.INTELLIGENCE, "label": "智力", "attr": "intelligence"},
+	{"kind": UpgradeKind.CONSTITUTION, "label": "体质", "attr": "constitution"},
+	{"kind": UpgradeKind.LUCK, "label": "幸运", "attr": "luck"},
+	{"kind": UpgradeKind.WILLPOWER, "label": "意志", "attr": "willpower"},
 ]
 
 
-func generate_options(player: Player, count: int = 3) -> Array[Dictionary]:
-	var options: Array[Dictionary] = UPGRADES.duplicate()
-	var picked: Array[Dictionary] = []
-	for i in range(minf(count, options.size())):
-		var idx = randi() % options.size()
-		picked.append(options[idx])
-		options.remove_at(idx)
-	return picked
+func generate_options(player: Player, count: int = 6) -> Array[Dictionary]:
+	var options: Array[Dictionary] = []
+	var attr_pool: Array[Dictionary] = ATTR_UPGRADES.duplicate()
+	attr_pool.shuffle()
+
+	for i in range(count):
+		# Rotate through every attribute so a full level-up screen always shows
+		# a balanced spread of stat boosts (no weapon/equipment options).
+		var def: Dictionary = attr_pool[i % attr_pool.size()]
+		var value: int = randi_range(2, 6)
+		options.append({
+			"kind": def["kind"],
+			"label": "%s +%d" % [def["label"], value],
+			"attr": def.get("attr", ""),
+			"value": value,
+		})
+	return options
 
 
 func apply_upgrade(upgrade: Dictionary, player: Player) -> void:
 	var kind = upgrade["kind"] as int
-	var value = upgrade["value"] as float
 
 	match kind:
 		UpgradeKind.HEALTH:
-			player.stats.max_health *= (1.0 + value)
-			player.stats.current_health = player.stats.max_health
-		UpgradeKind.STRENGTH:
-			player.character_data.strength += int(value)
-		UpgradeKind.AGILITY:
-			player.character_data.agility += int(value)
-		UpgradeKind.INTELLIGENCE:
-			player.character_data.intelligence += int(value)
-		UpgradeKind.CONSTITUTION:
-			player.character_data.constitution += int(value)
-		UpgradeKind.LUCK:
-			player.character_data.luck += int(value)
-		UpgradeKind.WILLPOWER:
-			player.character_data.willpower += int(value)
+			var value: int = int(upgrade.get("value", 2))
+			player.stats.max_health += value
+			player.heal(float(value))
+		_:
+			var attr: String = upgrade.get("attr", "")
+			var value: int = int(upgrade.get("value", 1))
+			if attr != "" and player.character_data:
+				player.character_data.set(attr, int(player.character_data.get(attr)) + value)
+			player.recompute_combat_stats()

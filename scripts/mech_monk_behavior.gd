@@ -21,3 +21,15 @@ func on_parts_pickup(parts: Node2D) -> void:
 func on_potion_pickup(potion: Node2D) -> void:
 	# Mech monk cannot use potions — ignore
 	pass
+
+
+func on_floor_clear(_floor: int) -> void:
+	# Mech monk has no lifesteal, so a big floor-clear heal is its sustain.
+	if owner and owner.stats.is_alive():
+		owner.heal(owner.stats.max_health * 0.4)
+
+
+func on_physics_process(delta: float) -> void:
+	# Slow self-repair over time (tanky, no active healing otherwise).
+	if owner and owner.stats.is_alive():
+		owner.heal(2.0 * delta)

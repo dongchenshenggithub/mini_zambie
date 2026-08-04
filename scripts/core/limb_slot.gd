@@ -9,3 +9,4 @@ extends Resource
 @export var base_speed_bonus: float = 0.0
 @export var base_armor_bonus: int = 0
 @export var base_crit_bonus: float = 0.0
+@export var rarity: GameEnums.Rarity = GameEnums.Rarity.COMMON

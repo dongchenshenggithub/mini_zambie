@@ -3,12 +3,21 @@ class_name BossBioTitan
 extends ZombieBoss
 
 var _shield_active: bool = true
+var _shield_timer: float = 0.0
 
 
 func _ready() -> void:
 	zombie_type = GameEnums.ZombieType.BOSS_BIO_TITAN
 	super._ready()
 	_special_attack_rate = 6.0
+
+
+func _physics_process(delta: float) -> void:
+	if _shield_timer > 0:
+		_shield_timer -= delta
+		if _shield_timer <= 0:
+			_shield_active = false
+	super._physics_process(delta)
 
 
 func _special_attack() -> void:
@@ -45,4 +54,12 @@ func _earthquake() -> void:
 
 
 func _activate_shield() -> void:
-	pass
+	_shield_active = true
+	_shield_timer = 6.0
+	_spawn_puff(Color(0.3, 0.6, 1.0, 0.6), 110.0)
+
+
+func take_damage(amount: float) -> void:
+	if _shield_active:
+		return
+	super.take_damage(amount)

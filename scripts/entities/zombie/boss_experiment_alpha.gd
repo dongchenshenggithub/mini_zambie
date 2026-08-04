@@ -9,6 +9,19 @@ func _ready() -> void:
 	_special_attack_rate = 4.0
 
 
+func _physics_process(delta: float) -> void:
+	if _reverse_timer > 0:
+		_reverse_timer -= delta
+	super._physics_process(delta)
+
+
+func take_damage(amount: float) -> void:
+	if _reverse_timer > 0:
+		super.take_damage(amount * 0.5)
+	else:
+		super.take_damage(amount)
+
+
 func _special_attack() -> void:
 	match current_phase:
 		1:
@@ -44,7 +57,11 @@ func _summon_mecha() -> void:
 
 
 func _reverse_shield() -> void:
-	pass
+	_reverse_timer = 6.0
+	_spawn_puff(Color(1.0, 0.3, 0.3, 0.6), 110.0)
+
+
+var _reverse_timer: float = 0.0
 
 
 func _speed_boost() -> void:

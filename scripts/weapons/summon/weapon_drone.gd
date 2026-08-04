@@ -11,6 +11,8 @@ func _init() -> void:
 	damage = 5.0
 	fire_rate = 3.0
 	range = 250.0
+	auto_fire = false
+	fire_mode = GameEnums.FireMode.SEMI
 
 
 func fire() -> void:
@@ -24,5 +26,9 @@ func fire() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	super._physics_process(delta)
+	# Autonomous summon: deploy once on its own, no player input needed.
+	if _drone == null and weapon_owner != null and weapon_owner.stats.is_alive():
+		fire()
 	if _drone and _drone.is_inside_tree():
 		_drone._physics_process(delta)

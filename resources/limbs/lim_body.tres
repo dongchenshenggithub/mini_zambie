@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="LimbSlot" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/limb_slot.gd" id="1_limb"]
+
+[resource]
+script = ExtResource("1_limb")
+slot_name = "复合胸甲"
+slot_type = 1
+base_damage_bonus = 0.0
+base_health_bonus = 10.0
+base_speed_bonus = 0.0
+base_armor_bonus = 3
+base_crit_bonus = 0.0
+rarity = 0

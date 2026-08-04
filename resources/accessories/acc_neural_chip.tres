@@ -1,0 +1,27 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://scripts/accessory_data.gd" id="1_accessory_data"]
+
+[resource]
+script = ExtResource("1_accessory_data")
+id = "acc_neural_chip"
+name = "神经芯片"
+category = "crit"
+rarity = 2
+health_bonus = 0
+strength_bonus = 0
+agility_bonus = 0
+intelligence_bonus = 3
+constitution_bonus = 0
+luck_bonus = 0
+willpower_bonus = 0
+melee_damage_mult = 0
+ranged_damage_mult = 0
+laser_damage_mult = 0
+summon_damage_mult = 0
+spray_damage_mult = 0
+crit_chance_bonus = 0.1
+crit_multiplier_bonus = 0
+armor_bonus = 0
+speed_bonus = 0
+attack_speed_bonus = 0

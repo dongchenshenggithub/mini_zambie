@@ -23,12 +23,20 @@ func _special_attack() -> void:
 
 
 func _nano_swarm() -> void:
-	pass  # AoE damage zone
+	var target = get_tree().get_first_node_in_group("player") as Player
+	if target and global_position.distance_to(target.global_position) < 280.0:
+		target.take_damage(current_damage * 0.3)
+	_spawn_puff(Color(0.6, 0.9, 1.0, 0.6), 110.0)
 
 
 func _split() -> void:
-	"""Splits into 2 mini nano cores."""
-	pass
+	"""Splits into 2 mini nanomites."""
+	var scene = get_tree().current_scene
+	if scene:
+		for i in range(2):
+			var m = preload("res://scripts/entities/zombie/zombie_nanomite.gd").new()
+			m.global_position = global_position + Vector2(randf_range(-60, 60), randf_range(-60, 60))
+			scene.add_child(m)
 
 
 func _absorb_zombies() -> void:

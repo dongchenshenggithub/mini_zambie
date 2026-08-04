@@ -20,6 +20,20 @@ var limb_speed_bonus: float = 0.0
 var limb_armor_bonus: int = 0
 var limb_crit_bonus: float = 0.0
 
+## Accessory (装备) bonus accumulators. Filled by PickupItem._equip_accessory()
+## and re-added every recompute so they survive the per-level-up recompute.
+var accessory_armor_bonus: int = 0
+var accessory_speed_bonus: float = 0.0
+var accessory_ranged_mult: float = 0.0
+var accessory_melee_mult: float = 0.0
+var accessory_laser_mult: float = 0.0
+var accessory_summon_mult: float = 0.0
+var accessory_spray_mult: float = 0.0
+var accessory_crit_bonus: float = 0.0
+
+## Base crit bonus derived from the 幸运 (luck) attribute via Player.recompute_combat_stats().
+var crit_bonus: float = 0.0
+
 var current_health: float = 0.0
 var _last_heal_time: float = 0.0
 
@@ -41,7 +55,14 @@ func get_damage_multiplier(atk_type: GameEnums.AttackType) -> float:
 
 
 func get_crit_bonus() -> float:
-	return limb_crit_bonus
+	return limb_crit_bonus + crit_bonus
+
+
+## Effective movement speed including any equipped prosthetic leg bonuses.
+## Previously limb_speed_bonus existed but was never applied, so leg prosthetics
+## had no effect on actual movement — this fixes that.
+func get_movement_speed() -> float:
+	return movement_speed + limb_speed_bonus
 
 
 func _physics_process(delta: float) -> void:

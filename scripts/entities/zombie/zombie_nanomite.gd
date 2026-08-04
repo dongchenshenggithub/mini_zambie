@@ -4,6 +4,11 @@ extends ZombieBase
 var _armor_down_timer: float = 0.0
 
 
+func _ready() -> void:
+	zombie_type = GameEnums.ZombieType.NANOMITE
+	super._ready()
+
+
 func take_damage(amount: float) -> void:
 	super.take_damage(amount)
 	# Apply armor down debuff to player

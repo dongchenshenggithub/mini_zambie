@@ -11,6 +11,8 @@ func _init() -> void:
 	damage = 15.0
 	fire_rate = 2.0
 	range = 200.0
+	auto_fire = false
+	fire_mode = GameEnums.FireMode.SEMI
 
 
 func fire() -> void:
@@ -22,3 +24,12 @@ func fire() -> void:
 		_turret.follow_owner = false
 		_turret.position = owner.position + Vector2(range, 0)
 		get_tree().current_scene.add_child(_turret)
+
+
+func _physics_process(delta: float) -> void:
+	super._physics_process(delta)
+	# Autonomous summon: deploy once on its own, no player input needed.
+	if _turret == null and weapon_owner != null and weapon_owner.stats.is_alive():
+		fire()
+	if _turret and _turret.is_inside_tree():
+		_turret._physics_process(delta)

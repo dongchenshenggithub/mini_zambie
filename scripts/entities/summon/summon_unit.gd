@@ -2,22 +2,26 @@
 class_name SummonUnit
 extends Node2D
 
+const PixelLoader = preload("res://scripts/core/pixel_loader.gd")
+
 @export var damage: float = 10.0
 @export var range: float = 150.0
 @export var follow_owner: bool = true
 
 var owner_node: Player = null
 func _ready() -> void:
+	add_to_group("summon")
 	_setup_visuals()
 
 
 func _setup_visuals() -> void:
-	var vis = ColorRect.new()
-	vis.position = Vector2(-8, -8)
-	vis.size = Vector2(16, 16)
-	vis.color = Color(0.2, 0.8, 0.2, 1.0)  # Green summon
-	vis.name = "Visual"
-	add_child(vis)
+	var spr = Sprite2D.new()
+	spr.texture = PixelLoader.load_texture("res://assets/pixel/summon.png")
+	spr.name = "Visual"
+	if spr.texture != null:
+		var target := 16.0
+		spr.scale = Vector2(target / spr.texture.get_width(), target / spr.texture.get_height())
+	add_child(spr)
 var _attack_timer: float = 0.0
 var _attack_rate: float = 1.0
 var _hp: float = 100.0

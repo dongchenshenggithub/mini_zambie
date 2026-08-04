@@ -2,6 +2,8 @@
 class_name SoulOrb
 extends Area2D
 
+const PixelLoader = preload("res://scripts/core/pixel_loader.gd")
+
 var target_player: Player = null
 var speed: float = 300.0
 var value: int = 1
@@ -14,12 +16,13 @@ func _ready() -> void:
 
 
 func _setup_visuals() -> void:
-	var vis = ColorRect.new()
-	vis.position = Vector2(-6, -6)
-	vis.size = Vector2(12, 12)
-	vis.color = Color(0.2, 0.8, 0.2, 1.0)  # Green orb
-	vis.name = "Visual"
-	add_child(vis)
+	var spr = Sprite2D.new()
+	spr.texture = PixelLoader.load_texture("res://assets/pixel/orb.png")
+	spr.name = "Visual"
+	if spr.texture != null:
+		var target := 14.0
+		spr.scale = Vector2(target / spr.texture.get_width(), target / spr.texture.get_height())
+	add_child(spr)
 
 
 func _physics_process(delta: float) -> void:

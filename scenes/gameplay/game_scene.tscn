@@ -54,39 +54,69 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="VBoxContainer" type="VBoxContainer" parent="HUD/Control"]
+[node name="TopLeft" type="VBoxContainer" parent="HUD/Control"]
+layout_mode = 1
+anchors_preset = 0
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 14.0
+offset_top = 12.0
+offset_right = 262.0
+offset_bottom = 188.0
+theme_override_constants/separation = 6
+
+[node name="HealthBar" type="ProgressBar" parent="HUD/Control/TopLeft"]
+layout_mode = 1
+custom_minimum_size = Vector2(234, 24)
+value = 100.0
+max_value = 100.0
+show_percentage = false
+
+[node name="HealthText" type="Label" parent="HUD/Control/TopLeft/HealthBar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "100 / 100"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 13
+
+[node name="XPBar" type="ProgressBar" parent="HUD/Control/TopLeft"]
+layout_mode = 1
+custom_minimum_size = Vector2(234, 10)
+value = 0.0
+max_value = 1.0
+show_percentage = false
+
+[node name="ScoreLabel" type="Label" parent="HUD/Control/TopLeft"]
+layout_mode = 1
+text = "得分: 0"
+
+[node name="WaveLabel" type="Label" parent="HUD/Control/TopLeft"]
+layout_mode = 1
+text = "波次: 1"
+
+[node name="LevelLabel" type="Label" parent="HUD/Control/TopLeft"]
+layout_mode = 1
+text = "等级: 1"
+
+[node name="BottomBar" type="HBoxContainer" parent="HUD/Control"]
 layout_mode = 1
 anchors_preset = 7
 anchor_left = 0.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -150.0
+offset_top = -64.0
 offset_bottom = -10.0
-vertical_alignment = 1
+alignment = 1
+theme_override_constants/separation = 10
 
-[node name="HealthBar" type="ProgressBar" parent="HUD/Control/VBoxContainer"]
-layout_mode = 1
-value = 100.0
-max_value = 100.0
-
-[node name="XPBar" type="ProgressBar" parent="HUD/Control/VBoxContainer"]
-layout_mode = 1
-value = 0.0
-max_value = 1.0
-
-[node name="ScoreLabel" type="Label" parent="HUD/Control/VBoxContainer"]
-layout_mode = 1
-text = "得分: 0"
-
-[node name="WaveLabel" type="Label" parent="HUD/Control/VBoxContainer"]
-layout_mode = 1
-text = "波次: 1"
-
-[node name="LevelLabel" type="Label" parent="HUD/Control/VBoxContainer"]
-layout_mode = 1
-text = "等级: 1"
-
-[node name="DurabilityLabel" type="Label" parent="HUD/Control/VBoxContainer"]
+[node name="DurabilityLabel" type="Label" parent="HUD/Control/BottomBar"]
 layout_mode = 1
 text = ""
+theme_override_colors/font_color = Color(0.85, 0.9, 1, 1)

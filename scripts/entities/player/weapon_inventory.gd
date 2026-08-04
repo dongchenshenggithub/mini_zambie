@@ -23,6 +23,14 @@ func equip_weapon(weapon: WeaponBase) -> bool:
 	weapon.equipped_weapon_index = slot_index
 	weapon.weapon_owner.inventory = self
 	weapon_equipped.emit(slot_index, weapon)
+	# Put the weapon node into the scene tree and set its built-in `owner`.
+	# Weapon subclasses reach `owner.global_position` and `get_tree()` inside
+	# fire(); without a tree parent and a valid owner the projectile spawn
+	# crashes and the weapon can never attack.
+	var p = weapon.weapon_owner
+	if p != null and weapon.get_parent() == null:
+		p.add_child(weapon)
+		weapon.owner = p
 	return true
 
 

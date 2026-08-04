@@ -1,6 +1,9 @@
 [gd_resource type="Resource" format=3]
 
+[ext_resource type="Script" path="res://scripts/weapon_data.gd" id="1_weapon_data"]
+
 [resource]
+script = ExtResource("1_weapon_data")
 id = "laser_heal"
 weapon_path = "res://scripts/weapons/spray/weapon_flame.gd"
 name = "激光治疗仪"

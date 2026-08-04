@@ -7,9 +7,13 @@ func _init() -> void:
 	weapon_category = GameEnums.WeaponCategory.HEAVY_RANGED
 	weapon_weight = 5
 	damage = 60.0
-	fire_rate = 0.25
+	fire_rate = 0.8
 	range = 350.0
 	splash_radius = 80.0
+	fire_mode = GameEnums.FireMode.SEMI
+	magazine_size = 3
+	current_ammo = 3
+	reload_time = 3.2
 
 
 func fire() -> void:
@@ -26,22 +30,6 @@ func fire() -> void:
 
 
 func _get_attack_direction() -> Vector2:
-	var nearest := _find_nearest_zombie()
-	if nearest:
-		return (nearest.global_position - owner.global_position).normalized()
+	if weapon_owner != null:
+		return weapon_owner.get_aim_dir()
 	return Vector2.RIGHT
-
-
-func _find_nearest_zombie() -> Node2D:
-	var scene = get_tree().current_scene
-	if not scene:
-		return null
-	var closest: Node2D = null
-	var closest_dist := INF
-	for child in scene.get_children():
-		if child is ZombieBase:
-			var dist = child.global_position.distance_to(owner.global_position)
-			if dist < closest_dist and dist <= range:
-				closest_dist = dist
-				closest = child
-	return closest

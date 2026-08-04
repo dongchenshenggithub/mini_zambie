@@ -36,7 +36,10 @@ func _spawn_minions() -> void:
 
 
 func _release_poison_cloud() -> void:
-	pass  # Visual effect + damage zone
+	var target = get_tree().get_first_node_in_group("player") as Player
+	if target and global_position.distance_to(target.global_position) < 250.0:
+		target.take_damage(current_damage * 0.25)
+	_spawn_puff(Color(0.4, 0.9, 0.2, 0.6), 90.0)
 
 
 func _fullscreen_charge() -> void:

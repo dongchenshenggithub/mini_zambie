@@ -11,6 +11,8 @@ func _init() -> void:
 	damage = 20.0
 	fire_rate = 1.0
 	range = 100.0
+	auto_fire = false
+	fire_mode = GameEnums.FireMode.SEMI
 
 
 func fire() -> void:
@@ -21,3 +23,10 @@ func fire() -> void:
 		_summoned.range = range
 		_summoned.follow_owner = true
 		get_tree().current_scene.add_child(_summoned)
+
+
+func _physics_process(delta: float) -> void:
+	super._physics_process(delta)
+	# Autonomous summon: deploy once on its own, no player input needed.
+	if _summoned == null and weapon_owner != null and weapon_owner.stats.is_alive():
+		fire()
