@@ -19,6 +19,10 @@ func _ready() -> void:
 	_setup_collision()
 	connect("body_entered", _on_body_entered)
 	_setup_visuals()
+	# Membership lets the floor-transition logic (GameScene._clear_floor_entities)
+	# sweep away uncollected drops when a new floor loads, instead of leaving
+	# previous-floor loot sitting in the new map.
+	add_to_group("drop")
 
 
 ## Area2D needs its own collision shape or body_entered never fires — without

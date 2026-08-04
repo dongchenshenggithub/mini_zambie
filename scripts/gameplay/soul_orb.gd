@@ -13,6 +13,8 @@ func _ready() -> void:
 	connect("body_entered", _on_body_entered)
 	_setup_visuals()
 	target_player = get_tree().get_first_node_in_group("player") as Player
+	# Same sweep group as PickupItem so floor transitions clear leftover orbs.
+	add_to_group("drop")
 
 
 func _setup_visuals() -> void:

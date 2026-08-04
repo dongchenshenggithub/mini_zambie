@@ -190,6 +190,7 @@ func _advance_floor_and_resume() -> void:
 func _advance_floor() -> void:
 	current_floor += 1
 	Game.advance_floor()
+	_clear_floor_entities()
 	_generate_map()
 	if player and player.behavior:
 		player.behavior.on_floor_clear(current_floor)
@@ -197,6 +198,18 @@ func _advance_floor() -> void:
 		_spawn_boss()
 	else:
 		wave_spawner.start_floor()
+
+
+## Removes every entity that belongs to the floor just cleared so the next
+## floor starts clean: leftover zombies / boss and any uncollected drops
+## (PickupItem weapon/accessory/parts/potion + SoulOrb, all in the "drop"
+## group). The player, HUD, the freshly regenerated map, and the player's own
+## summons (group "summon") are intentionally left untouched.
+func _clear_floor_entities() -> void:
+	for grp in ["zombie", "boss", "drop"]:
+		for node in get_tree().get_nodes_in_group(grp):
+			if is_instance_valid(node):
+				node.queue_free()
 
 
 func _spawn_boss() -> void:
