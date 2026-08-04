@@ -73,7 +73,7 @@ func _refresh_weapon_visual() -> void:
 	if inventory.weapons.is_empty():
 		_weapon_visual.visible = false
 		return
-	var cat: int = inventory.weapons[0].weapon_category
+	var cat: int = inventory.weapons[-1].weapon_category
 	var tex = PixelLoader.load_texture(_weapon_icon_path(cat))
 	if tex != null:
 		_weapon_visual.texture = tex

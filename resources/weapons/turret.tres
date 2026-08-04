@@ -4,15 +4,15 @@
 
 [resource]
 script = ExtResource("1_weapon_data")
-id = "chainsaw"
-weapon_path = "res://scripts/weapons/melee/weapon_chainsaw.gd"
-name = "链锯剑"
-category = 2
-attack_type = 1
+id = "turret"
+weapon_path = "res://scripts/weapons/summon/weapon_turret.gd"
+name = "哨戒炮"
+category = 9
+attack_type = 2
 damage = 15.0
-fire_rate = 4.0
-range = 60.0
-weapon_weight = 2
+fire_rate = 2.0
+range = 200.0
+weapon_weight = 3
 crit_chance = 0.05
 crit_multiplier = 2.0
 pierce = 0
@@ -24,5 +24,5 @@ magazine_size = 0
 reload_time = 0.0
 max_durability = 100.0
 durability_decay_rate = 1.0
-rarity = 0
-soul_cost = 5
+rarity = 1
+soul_cost = 6

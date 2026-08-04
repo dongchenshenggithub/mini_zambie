@@ -15,13 +15,20 @@ var current_followers: int = 1
 
 
 func equip_weapon(weapon: WeaponBase) -> bool:
+	var replaced: WeaponBase = null
 	if weapons.size() >= MAX_WEAPONS:
-		return false
+		# Slots are full: swap out the most-recently-added weapon so a pickup
+		# ALWAYS changes the loadout (instead of being silently ignored).
+		replaced = weapons.pop_back()
+		if replaced != null:
+			weapon_removed.emit(weapons.size())
+			replaced.queue_free()
 	var slot_index = weapons.size()
 	weapons.append(weapon)
 	weapon.weapon_owner = get_tree().get_first_node_in_group("player") as Player
 	weapon.equipped_weapon_index = slot_index
-	weapon.weapon_owner.inventory = self
+	if weapon.weapon_owner != null:
+		weapon.weapon_owner.inventory = self
 	weapon_equipped.emit(slot_index, weapon)
 	# Put the weapon node into the scene tree and set its built-in `owner`.
 	# Weapon subclasses reach `owner.global_position` and `get_tree()` inside

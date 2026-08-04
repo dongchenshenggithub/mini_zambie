@@ -25,6 +25,11 @@ extends Resource
 @export var effect: int = 0
 @export var effect_duration: float = 0.0
 
+@export_group("Firing")
+@export var fire_mode: int = 0  # 0 = GameEnums.FireMode.AUTO (长按连发), 1 = SEMI (单发/连点)
+@export var magazine_size: int = 0  # 0 = 无弹匣(近战/喷雾/召唤)，无限射
+@export var reload_time: float = 0.0
+
 @export_group("Durability")
 @export var max_durability: float = 100.0
 @export var durability_decay_rate: float = 1.0

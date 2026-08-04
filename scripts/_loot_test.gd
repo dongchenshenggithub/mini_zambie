@@ -78,6 +78,9 @@ func _init() -> void:
 	_acc = PickupItemScript.new()
 	_acc.item_type = PickupItemScript.ItemType.ACCESSORY
 	root.add_child(_acc)
+	# Keep it far from the player so the magnet auto-collect (which frees the
+	# drop) doesn't fire before we exercise _equip_accessory directly.
+	_acc.global_position = Vector2(5000.0, 5000.0)
 
 
 func _process(_delta: float) -> bool:

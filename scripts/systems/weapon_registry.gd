@@ -78,4 +78,7 @@ static func _copy_data_to_weapon(weapon: WeaponBase, data: WeaponData) -> void:
 	weapon.splash_radius = data.splash_radius
 	weapon.effect = data.effect
 	weapon.effect_duration = data.effect_duration
+	weapon.fire_mode = data.fire_mode
+	weapon.magazine_size = data.magazine_size
+	weapon.reload_time = data.reload_time
 	weapon.durability = data.max_durability
