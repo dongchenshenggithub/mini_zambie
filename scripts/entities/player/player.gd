@@ -29,6 +29,19 @@ var _original_color: Color = Color.WHITE
 var _fire_held: bool = false
 var _fire_just_pressed: bool = false
 
+## --- animation state machine (spritesheet 4x4) ---
+const ANIM_HFRAMES := 4
+const ANIM_VFRAMES := 4
+var _anim_state: String = "idle"
+var _anim_frame: int = 0
+var _anim_timer: float = 0.0
+var _attack_anim_timer: float = 0.0
+
+## Per-anim config: row index, unique frame count, fps.
+const _ANIM_ROW := {"idle": 0, "walk": 1, "attack": 2, "hurt": 3}
+const _ANIM_FRAMES := {"idle": 2, "walk": 4, "attack": 3, "hurt": 2}
+const _ANIM_FPS := {"idle": 2.0, "walk": 10.0, "attack": 12.0, "hurt": 8.0}
+
 
 func _ready() -> void:
 	add_to_group("player")
@@ -109,6 +122,37 @@ func get_aim_dir() -> Vector2:
 	return _aim_dir
 
 
+## Animation state machine — picks idle / walk / attack / hurt based on
+## game state and advances the Sprite2D frame within the spritesheet row.
+func _update_animation(delta: float) -> void:
+	if _visual == null or _visual.texture == null:
+		return
+
+	# Determine desired animation state (priority order).
+	var state := "idle"
+	if _flash_timer > 0:
+		state = "hurt"
+	elif _attack_anim_timer > 0:
+		state = "attack"
+	elif velocity.length_squared() > 1.0:
+		state = "walk"
+
+	# Reset frame counter when state changes.
+	if state != _anim_state:
+		_anim_state = state
+		_anim_frame = 0
+		_anim_timer = 0.0
+		_visual.frame = _ANIM_ROW[state] * ANIM_HFRAMES
+
+	# Advance frame at the animation's fps.
+		_anim_timer -= delta
+	if _anim_timer <= 0.0:
+			_anim_timer = 1.0 / _ANIM_FPS[state]
+			var fc: int = _ANIM_FRAMES[state]
+			_anim_frame = (_anim_frame + 1) % fc
+			_visual.frame = _ANIM_ROW[state] * ANIM_HFRAMES + _anim_frame
+
+
 func _create_player_visual() -> Sprite2D:
 	_visual = Sprite2D.new()
 	var cls: int = 0
@@ -117,6 +161,9 @@ func _create_player_visual() -> Sprite2D:
 	var tex = PixelLoader.load_texture("res://assets/pixel/player_%d.png" % cls)
 	if tex != null:
 		_visual.texture = tex
+	_visual.hframes = ANIM_HFRAMES
+	_visual.vframes = ANIM_VFRAMES
+	_visual.frame = 0
 	_visual.scale = Vector2(1.3, 1.3)
 	_visual.modulate = _original_color
 	_visual.visible = true
@@ -168,6 +215,15 @@ func _physics_process(delta: float) -> void:
 		for w in inventory.weapons:
 			w.set_fire_input(_fire_held, _fire_just_pressed)
 	_fire_just_pressed = false
+
+	# Attack-anim timer: keep attack pose while firing, or for a short
+	# window after a single click (SEMI).
+	if _fire_held:
+		_attack_anim_timer = 0.18
+	elif _attack_anim_timer > 0:
+		_attack_anim_timer -= delta
+
+	_update_animation(delta)
 
 
 ## Capture fire / reload input here (event-driven) instead of polling Input
