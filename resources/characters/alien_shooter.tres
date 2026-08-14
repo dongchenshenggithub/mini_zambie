@@ -25,3 +25,4 @@ build_direction = 0
 initial_weapon_id = "rifle"
 description = "章鱼状外星人，4条触手握持武器。远程伤害+50%，吞噬尸块回血。"
 limb_slots = [0]
+max_weapons = 4

@@ -68,7 +68,7 @@ func _build_cards() -> void:
 		trait_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		vbox.add_child(trait_label)
 
-		card.pressed.connect(func(): _on_select(char_entry))
+		card.pressed.connect(_on_select.bind(char_entry))
 		grid.add_child(card)
 
 

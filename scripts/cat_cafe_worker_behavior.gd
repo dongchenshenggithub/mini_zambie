@@ -2,6 +2,8 @@
 class_name CatCafeWorkerBehavior
 extends HumanBehavior
 
+const FollowerManagerScript = preload("res://scripts/systems/follower_manager.gd")
+
 
 func on_level_up(new_level: int) -> void:
 	# Cat cafe worker gains follower slots faster
@@ -18,19 +20,21 @@ func on_weapon_pickup(weapon: WeaponBase) -> void:
 
 
 func on_floor_clear(_floor: int) -> void:
-	# Each floor, recruit another cafe cat ally (capped).
+	# Each floor, recruit another cafe cat ally (respects max_followers cap).
 	_spawn_cat_ally()
 
 
 func _spawn_cat_ally() -> void:
 	if owner == null:
 		return
+	# Route through the unified FollowerManager so the per-character cap
+	# (max_followers=8 for cat cafe worker, NOT the old hardcoded 6) is
+	# enforced and current_followers stays accurate.
 	var tree = owner.get_tree()
-	if tree.get_nodes_in_group("summon").size() >= 6:
+	if tree == null:
 		return
-	var cat = preload("res://scripts/entities/summon/summon_unit.gd").new()
-	cat.owner_node = owner
-	cat.damage = 15.0
-	cat.range = 220.0
-	cat.global_position = owner.global_position + Vector2(randf_range(-30, 30), randf_range(-30, 30))
-	tree.current_scene.add_child(cat)
+	var gs = tree.current_scene
+	if gs and gs.has_method("get") and gs.get("follower_manager") != null:
+		var fm = gs.get("follower_manager") as FollowerManagerScript
+		if fm:
+			fm.try_add_follower(3)  # 3 = CharacterClass.CAT_CAFE_WORKER

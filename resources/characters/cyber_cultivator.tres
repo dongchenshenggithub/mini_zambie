@@ -25,3 +25,4 @@ build_direction = 1
 initial_weapon_id = "sword"
 description = "近战武器可远程投掷并回收，无视障碍。远程武器减弱。"
 limb_slots = [2, 3, 4, 5]
+max_weapons = 2

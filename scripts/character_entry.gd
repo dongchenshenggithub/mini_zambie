@@ -8,6 +8,9 @@ extends Resource
 @export var character_class: int = 0
 @export var build_direction: int = 0
 @export var initial_weapon_id: String = ""
+## Multiple starting weapons (e.g. Cat Cafe Worker gets a pistol AND a drone).
+## Equipped in order; falls back to the single `initial_weapon_id` when empty.
+@export var initial_weapon_ids: Array[String] = []
 
 @export_group("Description")
 @export var description: String = ""
@@ -33,6 +36,8 @@ extends Resource
 @export var ranged_damage_multiplier: float = 1.0
 @export var summon_damage_multiplier: float = 1.0
 @export var spray_damage_multiplier: float = 1.0
+## Max weapons this character can hold at once (Alien Shooter = 4 tentacles).
+@export var max_weapons: int = 2
 @export var limb_slots: Array[int] = [2, 3, 4, 5]
 
 @export_group("Unlock Reward")

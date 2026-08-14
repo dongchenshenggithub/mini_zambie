@@ -50,6 +50,18 @@ var _fire_just_pressed: bool = false
 
 var _durability_timer: float = 0.0
 
+## Companions ("companion weapons") occupy a weapon slot and spawn a follower.
+## `is_companion` is true only for CompanionWeapon; it lets GameScene and the
+## inventory panel treat the weapon as an ally rather than a firing weapon.
+var is_companion: bool = false
+var companion_unit: Node2D = null
+
+## Called by GameScene after a companion weapon is equipped so the follower can
+## be spawned (FollowerManager is created after initial weapons are equipped).
+## Overridden by CompanionWeapon; no-op here so non-companion weapons stay safe.
+func spawn_companion(_character_class: int) -> void:
+	pass
+
 
 func _physics_process(delta: float) -> void:
 	if weapon_owner == null or not weapon_owner.stats.is_alive():
@@ -116,6 +128,12 @@ func _attempt_fire() -> bool:
 		return false
 	if weapon_owner == null or not weapon_owner.stats.is_alive() or durability <= 0:
 		return false
+	# Cultivator signature: melee weapons are THROWN as slow, piercing,
+	# obstacle-ignoring projectiles that boomerang back (throw + recall).
+	# No magazine / no reload — the weapon just re-throws on fire_rate.
+	if attack_type == GameEnums.AttackType.MELEE and _owner_is_cultivator():
+		_spawn_thrown_melee()
+		return true
 	if magazine_size > 0:
 		current_ammo -= 1
 		if current_ammo <= 0:
@@ -126,16 +144,70 @@ func _attempt_fire() -> bool:
 	elif magazine_size > 0:
 		SfxManager.play("shoot")
 	fire()
+	# Visual: show the melee attack range + swing trail on every swing.
+	if attack_type == GameEnums.AttackType.MELEE:
+		_spawn_melee_trail()
 	return true
 
 
+## True when the held weapon belongs to the Cyber Cultivator (class 2), whose
+## only usable weapons are melee (restricted by its behavior) — so any melee
+## weapon it holds is thrown rather than swung.
+func _owner_is_cultivator() -> bool:
+	if weapon_owner == null or weapon_owner.character_data == null:
+		return false
+	return weapon_owner.character_data.character_class == 2
+
+
+## Spawns the boomerang flying-sword projectile for the cultivator's throw.
+func _spawn_thrown_melee() -> void:
+	if weapon_owner == null:
+		return
+	var proj = preload("res://scripts/weapons/thrown_melee.gd").new()
+	var tree = weapon_owner.get_tree()
+	var scene = tree.current_scene if tree != null else null
+	if scene == null:
+		scene = weapon_owner.get_parent()
+	if scene == null:
+		return
+	scene.add_child(proj)
+	proj.setup(weapon_owner, _get_attack_direction(), get_final_damage(), range)
+	SfxManager.play("swing")  # throw whoosh
+
+
 ## Begin reloading if the weapon actually uses a magazine and isn't full.
+## Picks a reload SFX that matches the weapon type (shotgun pump, RPG
+## heavy thunk, laser energy hum, or default light click for rifles/SMGs).
 func start_reload() -> void:
 	if magazine_size <= 0 or is_reloading or current_ammo >= magazine_size:
 		return
 	is_reloading = true
 	_reload_timer = reload_time
-	SfxManager.play("reload")
+	SfxManager.play(_get_reload_sound())
+
+
+## Pick the correct reload SFX for this weapon. Per-weapon name overrides
+## take priority; category is used as fallback so new weapons automatically
+## get an appropriate sound without needing explicit entries here.
+func _get_reload_sound() -> String:
+	# Per-weapon name overrides (most precise).
+	var name_map := {
+		"霰弹枪": "reload_shotgun",
+		"火箭炮": "reload_heavy",
+		"电磁步枪": "reload_laser",
+	}
+	if name_map.has(weapon_name):
+		return name_map[weapon_name]
+	# Category-based fallback.
+	match weapon_category:
+		GameEnums.WeaponCategory.LIGHT_LASER, GameEnums.WeaponCategory.HEAVY_LASER:
+			return "reload_laser"
+		GameEnums.WeaponCategory.EXPLOSIVE:
+			return "reload_heavy"
+		GameEnums.WeaponCategory.HEAVY_RANGED:
+			return "reload_shotgun"
+		_:
+			return "reload"  # default: light click (rifle/SMG)
 
 
 ## Finish reloading (also called directly by tests / logic).
@@ -152,6 +224,35 @@ func cancel_reload() -> void:
 
 func fire() -> void:
 	pass
+
+
+## Spawn (once) or reuse the player's MeleeTrail node and kick off a swing
+## animation. Called by _attempt_fire() for every MELEE weapon so all melee
+## weapons (chainsaw / dual blade / hammer / electro / future ones) get a
+## visible attack range + slash trail automatically.
+func _spawn_melee_trail() -> void:
+	if weapon_owner == null:
+		return
+	var trail = weapon_owner.get_node_or_null("MeleeTrail")
+	if trail == null:
+		trail = load("res://scripts/weapons/melee_trail.gd").new()
+		trail.name = "MeleeTrail"
+		weapon_owner.add_child(trail)
+	trail.trigger(range, _melee_trail_color(), _get_attack_direction())
+
+
+## Slash colour per weapon feel. Sharp = cyan-white, blunt = orange,
+## heavy blunt = red, anything else = white.
+func _melee_trail_color() -> Color:
+	match weapon_category:
+		GameEnums.WeaponCategory.MELEE_SHARP:
+			return Color(0.8, 1.0, 1.0)
+		GameEnums.WeaponCategory.MELEE_BLUNT:
+			return Color(1.0, 0.7, 0.3)
+		GameEnums.WeaponCategory.HEAVY_MELEE_BLUNT:
+			return Color(1.0, 0.4, 0.4)
+		_:
+			return Color(1.0, 1.0, 1.0)
 
 
 ## Direction bullets travel. Player-held weapons follow the mouse via the

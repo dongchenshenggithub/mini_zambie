@@ -47,5 +47,12 @@ func on_floor_clear(_floor: int) -> void:
 	pass
 
 
+## Optional active-ability hook. The GameScene routes the "place_tower" input
+## action here so a character (e.g. Professor) can deploy structures. Default
+## classes have no active ability, so this is a no-op.
+func on_special_ability(_scene: Node2D) -> void:
+	pass
+
+
 func on_player_die() -> void:
 	pass

@@ -9,7 +9,9 @@ const LimbRegistryScript = preload("res://scripts/systems/limb_registry.gd")
 const UpgradePanelScript = preload("res://scripts/ui/upgrade_panel.gd")
 const DeathScreenScript = preload("res://scripts/gameplay/death_screen.gd")
 const TransitionBannerScript = preload("res://scripts/ui/transition_banner.gd")
+const ShopPanelScript = preload("res://scripts/ui/shop_panel.gd")
 const MapGeneratorScript = preload("res://scripts/map/map_generator.gd")
+const FollowerManagerScript = preload("res://scripts/systems/follower_manager.gd")
 
 @onready var player: Player = $Player
 @onready var camera: Camera2D = $Camera2D
@@ -21,8 +23,10 @@ var current_floor: int = 1
 var total_floors: int = 15
 var _map_root: Node2D = null
 var _is_boss_floor: bool = false
-var _shop_unlocked: bool = false
+var _shop_unlocked: bool = true
+var _shop_open: bool = false
 var _upgrade_open: bool = false
+var _inventory_open: bool = false
 var _pending_level_ups: int = 0
 var _transitioning: bool = false
 var run_start_time: int = 0
@@ -30,6 +34,7 @@ var run_start_time: int = 0
 ## to this rect; the camera limits its view to it so neither can leave the
 ## background art.
 var _world_bounds := Rect2(-800.0, -500.0, 1600.0, 1000.0)
+var follower_manager: FollowerManagerScript = null
 
 
 ## Read-only accessor for the active floor bounds. Duck-typed by the player so
@@ -68,21 +73,35 @@ func _ready() -> void:
 
 
 func _setup_player() -> void:
+	var char_entry = Game.selected_character
 	if player == null:
 		player = preload("res://scripts/entities/player/player.gd").new()
 		player.name = "Player"
 		add_child(player)
 		player.add_to_group("player")
-
-	var char_entry = Game.selected_character
-	if char_entry:
+	# Assign character data regardless of whether the player node was pre-existing
+	# or just created. The player's _ready may have already built its visual with
+	# the default class 0 (veteran); the character_data setter rebuilds the visual
+	# with the correct spritesheet, so the selection always shows on screen.
+	if char_entry != null and player.character_data == null:
 		player.character_data = char_entry
+		# Player._ready runs before character_data is assigned for the pre-placed
+		# $Player node, so _create_behavior() skipped it there. Build the class
+		# behavior now that character_data is known — without this every class
+		# ability hook (on_floor_clear, on_weapon_pickup, the Professor's turret
+		# placement, etc.) silently never fires.
+		player._create_behavior()
 
 	if player.stats == null:
 		player.stats = PlayerStats.new()
 	if player.inventory == null:
 		player.inventory = WeaponInventory.new()
 		player.add_child(player.inventory)
+	# Always start at zero so spawn_initial() counts the recruited companions
+	# accurately against max_followers. The inventory's default is 1, and the
+	# pre-placed $Player node already has an inventory child, so this must run
+	# unconditionally (NOT inside the `if inventory == null` guard above).
+	player.inventory.current_followers = 0
 	if player.prosthetic_manager == null:
 		var is_mech = (char_entry and char_entry.character_class == 1)
 		player.prosthetic_manager = ProstheticManager.new(is_mech, player.stats)
@@ -91,16 +110,53 @@ func _setup_player() -> void:
 	player._apply_character_traits()
 	_equip_initial_weapon_from_registry()
 
+	# Set up the unified follower/companion manager and spawn base_followers
+	# for the selected character (respects per-character max_followers cap).
+	if follower_manager == null:
+		follower_manager = preload("res://scripts/systems/follower_manager.gd").new()
+		follower_manager.name = "FollowerManager"
+		add_child(follower_manager)
+	follower_manager.setup(player, self)
+	if char_entry != null:
+		follower_manager.spawn_initial(char_entry.character_class, char_entry.base_followers)
+	# When a companion weapon is equipped (non-Cat-Cafe characters pick up a
+	# COMPANION drop), spawn its linked follower. Cat Cafe recruits companions
+	# directly and never equips companion weapons, so this is a no-op for it.
+	if player.inventory != null:
+		if not player.inventory.weapon_equipped.is_connected(_on_weapon_equipped):
+			player.inventory.weapon_equipped.connect(_on_weapon_equipped)
+
 
 func _equip_initial_weapon_from_registry() -> void:
 	var char_entry = Game.selected_character
 	if not char_entry:
 		return
 	var inv = player.inventory as WeaponInventory
-	var weapon_data = WeaponRegistry.get_data(char_entry.initial_weapon_id)
-	if weapon_data:
-		var weapon = WeaponRegistry.spawn_instance(weapon_data)
-		inv.equip_weapon(weapon)
+	# A character may start with several weapons (e.g. Cat Cafe Worker keeps a
+	# pistol AND a drone). Equip every id in order; fall back to the single
+	# legacy `initial_weapon_id` when the array is empty.
+	var ids: Array[String] = []
+	if char_entry.initial_weapon_ids.size() > 0:
+		ids = char_entry.initial_weapon_ids
+	elif not char_entry.initial_weapon_id.is_empty():
+		ids = [char_entry.initial_weapon_id]
+	for wid in ids:
+		var weapon_data = WeaponRegistry.get_data(wid)
+		if weapon_data:
+			var weapon = WeaponRegistry.spawn_instance(weapon_data)
+			inv.equip_weapon(weapon)
+
+
+func _on_weapon_equipped(_index: int, weapon: WeaponBase) -> void:
+	# Only companion weapons spawn a follower; normal weapons are left alone.
+	if weapon == null or not weapon.is_companion:
+		return
+	if follower_manager == null:
+		return
+	var cls := -1
+	if player != null and player.character_data != null:
+		cls = player.character_data.character_class
+	weapon.spawn_companion(cls)
 
 
 func _generate_map() -> void:
@@ -108,6 +164,10 @@ func _generate_map() -> void:
 		_map_root.queue_free()
 
 	_is_boss_floor = (current_floor == total_floors)
+	# The boss floor runs as an infinite survival mode: endless waves spawn
+	# alongside the boss until it dies (see _spawn_boss -> start_infinite()).
+	if wave_spawner:
+		wave_spawner.is_infinite = _is_boss_floor
 	var gen = MapGenerator.new()
 	_map_root = gen.generate_floor(current_floor, _is_boss_floor)
 	_map_root.name = "Floor_%d" % current_floor
@@ -135,11 +195,20 @@ func _start_waves() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _shop_open or _inventory_open:
+		return  # shop / inventory own all input while open
 	if event.is_action_pressed("pause") and not _upgrade_open:
 		_toggle_pause()
 		return
 	if event.is_action_pressed("status") and not _upgrade_open and not get_tree().paused:
 		_open_status_panel()
+	if event.is_action_pressed("open_inventory") and not _upgrade_open and not get_tree().paused:
+		_open_inventory_panel()
+	if event.is_action_pressed("place_tower") and not _upgrade_open and not get_tree().paused:
+		# Active ability (Professor's turret/heal placement). Other characters
+		# have a no-op on_special_ability, so this is safe for everyone.
+		if player and player.behavior and player.behavior.has_method("on_special_ability"):
+			player.behavior.on_special_ability(self)
 
 
 func _toggle_pause() -> void:
@@ -156,6 +225,19 @@ func _open_status_panel() -> void:
 	if get_tree().paused:
 		return
 	var panel = preload("res://scripts/ui/character_panel.gd").new()
+	_add_overlay(panel)
+	get_tree().paused = true
+
+
+## Opens the weapon/companion inventory panel (hotkey: B). Pauses the run so the
+## player can drop weapons / dismiss companions without taking fire. The panel
+## handles its own close and resumes the tree.
+func _open_inventory_panel() -> void:
+	if get_tree().paused:
+		return
+	_inventory_open = true
+	var panel = preload("res://scripts/ui/weapon_inventory_panel.gd").new()
+	panel.tree_exiting.connect(func(): _inventory_open = false)
 	_add_overlay(panel)
 	get_tree().paused = true
 
@@ -177,8 +259,37 @@ func _on_floor_cleared(_floor: int) -> void:
 		"进入第 %d 层 · %s" % [next, theme],
 		1.8,
 		Color(0.45, 0.9, 1.0, 1.0),
-		_advance_floor_and_resume
+		_after_clear_banner
 	)
+
+
+## After the "floor cleared" banner, open the between-floor shop (if unlocked
+## and this isn't the boss floor) before advancing. The shop pauses the tree;
+## when it closes we run the stored callback to advance to the next floor.
+func _after_clear_banner() -> void:
+	if _should_open_shop():
+		_open_shop(_advance_floor_and_resume)
+	else:
+		_advance_floor_and_resume()
+
+
+func _should_open_shop() -> bool:
+	return _shop_unlocked and current_floor < total_floors
+
+
+## Opens the shop overlay and advances the floor once the player leaves it.
+func _open_shop(after_close: Callable) -> void:
+	_shop_open = true
+	var shop = ShopPanelScript.new()
+	shop.setup(self)
+	_add_overlay(shop)
+	shop.shop_closed.connect(_on_shop_closed.bind(after_close))
+	shop.show_shop()
+
+
+func _on_shop_closed(after_close: Callable) -> void:
+	_shop_open = false
+	after_close.call()
 
 
 func _advance_floor_and_resume() -> void:
@@ -213,7 +324,9 @@ func _clear_floor_entities() -> void:
 
 
 func _spawn_boss() -> void:
-	wave_spawner.stop_waving()
+	# Boss floor = infinite mode: keep spawning regular zombies endlessly
+	# alongside the boss. The floor only ends when the boss is defeated.
+	wave_spawner.start_infinite()
 	var boss_type = wave_spawner.pick_boss_for_floor(current_floor)
 	var boss = wave_spawner.create_boss(boss_type)
 	if boss == null:

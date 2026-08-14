@@ -67,7 +67,7 @@ static func _create_veteran() -> CharacterEntry:
 	c.starting_speed = 200.0
 	c.strength = 5; c.agility = 5; c.intelligence = 5
 	c.constitution = 5; c.luck = 5; c.willpower = 5
-	c.base_followers = 2; c.max_followers = 4
+	c.base_followers = 0; c.max_followers = 2
 	c.can_heal_self = true; c.heal_rate = 2.0
 	c.laser_damage_multiplier = 1.0; c.melee_damage_multiplier = 1.0
 	c.ranged_damage_multiplier = 1.0; c.summon_damage_multiplier = 1.0
@@ -88,7 +88,7 @@ static func _create_mech_monk() -> CharacterEntry:
 	c.starting_speed = 180.0
 	c.strength = 7; c.agility = 4; c.intelligence = 5
 	c.constitution = 7; c.luck = 5; c.willpower = 5
-	c.base_followers = 1; c.max_followers = 3
+	c.base_followers = 0; c.max_followers = 2
 	c.can_heal_self = false; c.heal_rate = 0.0
 	c.laser_damage_multiplier = 1.5; c.melee_damage_multiplier = 1.5
 	c.ranged_damage_multiplier = 0.8; c.summon_damage_multiplier = 0.8
@@ -109,7 +109,7 @@ static func _create_cyber() -> CharacterEntry:
 	c.starting_speed = 220.0
 	c.strength = 6; c.agility = 4; c.intelligence = 6
 	c.constitution = 5; c.luck = 5; c.willpower = 5
-	c.base_followers = 1; c.max_followers = 3
+	c.base_followers = 0; c.max_followers = 2
 	c.can_heal_self = true; c.heal_rate = 1.5
 	c.laser_damage_multiplier = 1.3; c.melee_damage_multiplier = 1.5
 	c.ranged_damage_multiplier = 0.5; c.summon_damage_multiplier = 1.2
@@ -124,7 +124,8 @@ static func _create_cat() -> CharacterEntry:
 	c.name = "猫咖店员"
 	c.character_class = 3
 	c.build_direction = 2
-	c.initial_weapon_id = "drone"
+	c.initial_weapon_ids = ["pistol", "drone"]
+	c.initial_weapon_id = "drone"  # fallback if initial_weapon_ids is empty
 	c.description = "输出靠随从，可给随从装备武器。随从数量与智力成正比。"
 	c.starting_health = 70.0
 	c.starting_speed = 190.0
@@ -151,7 +152,7 @@ static func _create_prof() -> CharacterEntry:
 	c.starting_speed = 180.0
 	c.strength = 4; c.agility = 5; c.intelligence = 8
 	c.constitution = 5; c.luck = 5; c.willpower = 7
-	c.base_followers = 1; c.max_followers = 3
+	c.base_followers = 0; c.max_followers = 2
 	c.can_heal_self = true; c.heal_rate = 1.0
 	c.laser_damage_multiplier = 2.0; c.melee_damage_multiplier = 0.8
 	c.ranged_damage_multiplier = 1.0; c.summon_damage_multiplier = 1.0
@@ -172,7 +173,7 @@ static func _create_alien() -> CharacterEntry:
 	c.starting_speed = 210.0
 	c.strength = 3; c.agility = 8; c.intelligence = 5
 	c.constitution = 3; c.luck = 5; c.willpower = 5
-	c.base_followers = 1; c.max_followers = 3
+	c.base_followers = 0; c.max_followers = 4; c.max_weapons = 4
 	c.can_heal_self = false; c.heal_rate = 0.0
 	c.laser_damage_multiplier = 1.0; c.melee_damage_multiplier = 0.7
 	c.ranged_damage_multiplier = 1.5; c.summon_damage_multiplier = 1.0

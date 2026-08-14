@@ -18,6 +18,10 @@ static var current_wave: int = 1
 static var current_floor: int = 1
 static var score: int = 0
 static var kills: int = 0
+## Spendable currency earned by killing zombies — used by the between-floor shop.
+## Kept separate from `score` so spending in the shop doesn't cannibalise the
+## end-of-run performance metric.
+static var souls: int = 0
 static var is_game_active: bool = false
 static var is_paused: bool = false
 
@@ -34,6 +38,7 @@ static func start_game(character: CharacterEntry) -> void:
 	current_floor = 1
 	score = 0
 	kills = 0
+	souls = 0
 	is_game_active = true
 	is_paused = false
 

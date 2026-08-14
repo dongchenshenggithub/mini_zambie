@@ -25,3 +25,4 @@ build_direction = 3
 initial_weapon_id = "laser_heal"
 description = "激光武器伤害翻倍。可放置固定炮台和治疗塔。"
 limb_slots = [2, 3, 4, 5]
+max_weapons = 2

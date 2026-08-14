@@ -25,3 +25,4 @@ build_direction = 1
 initial_weapon_id = "chainsaw"
 description = "机械人类，无自愈。近战和激光加强，拆武回血。全身义肢可换。"
 limb_slots = [0, 1, 2, 3, 4, 5]
+max_weapons = 2

@@ -18,6 +18,9 @@ const SOUNDS := {
 	"swing": "res://assets/sfx/swing.wav",
 	"explosion": "res://assets/sfx/explosion.wav",
 	"reload": "res://assets/sfx/reload.wav",
+	"reload_shotgun": "res://assets/sfx/reload_shotgun.wav",
+	"reload_heavy": "res://assets/sfx/reload_heavy.wav",
+	"reload_laser": "res://assets/sfx/reload_laser.wav",
 }
 
 static var _instance: SfxManager = null

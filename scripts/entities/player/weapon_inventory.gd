@@ -2,7 +2,7 @@
 class_name WeaponInventory
 extends Node
 
-const MAX_WEAPONS: int = 2
+var max_weapons: int = 2
 
 signal weapon_equipped(index: int, weapon: WeaponBase)
 signal weapon_removed(index: int)
@@ -11,17 +11,22 @@ signal follower_count_changed(count: int)
 var weapons: Array[WeaponBase] = []
 var build_direction: int = 0
 var max_followers: int = 1
-var current_followers: int = 1
+var current_followers: int = 0
 
 
 func equip_weapon(weapon: WeaponBase) -> bool:
 	var replaced: WeaponBase = null
-	if weapons.size() >= MAX_WEAPONS:
-		# Slots are full: swap out the most-recently-added weapon so a pickup
-		# ALWAYS changes the loadout (instead of being silently ignored).
-		replaced = weapons.pop_back()
+	if weapons.size() >= max_weapons:
+		# Slots are full: swap out a weapon so a pickup ALWAYS changes the
+		# loadout. We prefer dropping a NON-melee weapon so a melee weapon the
+		# player picked up doesn't get silently replaced after a few kills
+		# (it stays equipped as long as any ranged/other weapon can be dropped
+		# instead). Falls back to the oldest weapon when everything is melee.
+		var idx := _pick_replace_index()
+		replaced = weapons[idx]
+		weapons.remove_at(idx)
 		if replaced != null:
-			weapon_removed.emit(weapons.size())
+			weapon_removed.emit(idx)
 			replaced.queue_free()
 	var slot_index = weapons.size()
 	weapons.append(weapon)
@@ -39,6 +44,20 @@ func equip_weapon(weapon: WeaponBase) -> bool:
 		p.add_child(weapon)
 		weapon.owner = p
 	return true
+
+
+## When the weapon bar is full, pick which existing weapon to swap out on a
+## pickup. Prefer a NON-melee weapon (keep melee equipped); otherwise drop the
+## oldest weapon. Returns an index into `weapons`.
+func _pick_replace_index() -> int:
+	var oldest_non_melee := -1
+	for i in range(weapons.size()):
+		if weapons[i].attack_type != GameEnums.AttackType.MELEE:
+			oldest_non_melee = i
+			break
+	if oldest_non_melee >= 0:
+		return oldest_non_melee
+	return 0
 
 
 func remove_weapon(index: int) -> bool:

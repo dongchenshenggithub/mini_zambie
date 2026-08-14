@@ -5,7 +5,7 @@ extends Area2D
 const PixelLoader = preload("res://scripts/core/pixel_loader.gd")
 const WeaponRegistry = preload("res://scripts/systems/weapon_registry.gd")
 
-enum ItemType { POTION, WEAPON, ACCESSORY, PARTS }
+enum ItemType { POTION, WEAPON, ACCESSORY, PARTS, COMPANION }
 
 @export var item_type: ItemType = ItemType.POTION
 @export var rarity: int = 0  # 0=common, 1=uncommon, 2=rare, 3=epic
@@ -39,20 +39,31 @@ func _setup_collision() -> void:
 
 
 func _setup_visuals() -> void:
+	# Rarity ring (colored outline behind the icon) so type color and rarity
+	# color never conflict — the icon keeps its baked type colour and shape,
+	# while a separate ring shows common/uncommon/rare/epic.
+	var ring = Sprite2D.new()
+	ring.name = "RarityRing"
+	ring.texture = PixelLoader.load_texture("res://assets/pixel/rarity_ring.png")
+	if ring.texture != null:
+		var rt := 28.0
+		ring.scale = Vector2(rt / ring.texture.get_width(), rt / ring.texture.get_height())
+		var ring_colors := [
+			Color(0.6, 0.6, 0.65, 1.0),   # common   – steel grey
+			Color(1.0, 0.85, 0.2, 1.0),    # uncommon – gold
+			Color(0.3, 0.6, 1.0, 1.0),     # rare     – blue
+			Color(0.85, 0.35, 1.0, 1.0),   # epic     – magenta
+		]
+		ring.modulate = ring_colors[rarity] if rarity < ring_colors.size() else Color.WHITE
+	add_child(ring)
+
+	# Main item icon (baked type colour + distinct shape).
 	var spr = Sprite2D.new()
 	spr.texture = PixelLoader.load_texture(_get_item_texture_path())
 	spr.name = "Visual"
 	if spr.texture != null:
 		var target := 18.0
 		spr.scale = Vector2(target / spr.texture.get_width(), target / spr.texture.get_height())
-		# Subtle rarity tint so drops still read as common/uncommon/rare/epic.
-		var tints := [
-			Color(1.0, 1.0, 1.0, 1.0),
-			Color(1.0, 0.9, 0.5, 1.0),
-			Color(0.6, 0.8, 1.0, 1.0),
-			Color(1.0, 0.6, 1.0, 1.0),
-		]
-		spr.modulate = tints[rarity] if rarity < tints.size() else Color.WHITE
 	add_child(spr)
 	# Gentle bob so drops clearly read as collectible pickups.
 	if spr.texture != null:
@@ -101,6 +112,8 @@ func _on_pickup() -> void:
 			_equip_accessory()
 		ItemType.PARTS:
 			_use_parts()
+		ItemType.COMPANION:
+			_add_companion()
 	queue_free()
 
 
@@ -241,10 +254,60 @@ func _toast(text: String) -> void:
 		h.show_toast(text)
 
 
+## Companion (护卫) pickup.
+##   - Cat Cafe (class 3) is the pure summoner: companions are uncapped by weapon
+##     slots and recruited directly through FollowerManager (try_add_follower).
+##   - Every other character gains companions ONLY through "companion weapons":
+##     picking one up equips a CompanionWeapon that OCCUPIES one weapon slot and
+##     spawns a 1:1 linked follower. The companion count is therefore implicitly
+##     capped by the number of free weapon slots (max_weapons), so non-Cat-Cafe
+##     characters can never exceed that many companions.
+func _add_companion() -> void:
+	var player = get_tree().get_first_node_in_group("player") as Player
+	if player == null or not player.stats.is_alive():
+		return
+	var cls: int = -1
+	if player.character_data != null:
+		cls = player.character_data.character_class
+
+	# Cat Cafe: add straight through FollowerManager, uncapped by weapon slots.
+	if cls == 3:
+		var fm = null
+		var gs = get_tree().current_scene
+		if gs != null and gs.has_method("get") and gs.get("follower_manager") != null:
+			fm = gs.get("follower_manager")
+		if fm != null and fm.has_method("try_add_follower"):
+			if fm.try_add_follower(cls):
+				_toast("获得护卫！")
+			else:
+				_toast("护卫栏已满")
+		return
+
+	# Other characters: a companion occupies one weapon slot (1:1). The cap is
+	# the number of free weapon slots, so the companion count can never exceed
+	# max_weapons (their follower cap is set equal to max_weapons in the registry).
+	var fm = null
+	var gs = get_tree().current_scene
+	if gs != null and gs.has_method("get") and gs.get("follower_manager") != null:
+		fm = gs.get("follower_manager")
+	if fm == null or not fm.has_method("can_add") or not fm.can_add():
+		_toast("护卫栏已满")
+		return
+	var inv = player.inventory as WeaponInventory
+	if inv == null:
+		return
+	var cw = preload("res://scripts/weapons/companion_weapon.gd").new()
+	cw.weapon_name = "护卫"
+	# equip_weapon() emits weapon_equipped -> GameScene spawns the linked follower.
+	inv.equip_weapon(cw)
+	_toast("装备护卫武器")
+
+
 func _get_item_texture_path() -> String:
 	match item_type:
 		ItemType.POTION: return "res://assets/pixel/item_potion.png"
 		ItemType.WEAPON: return "res://assets/pixel/item_weapon.png"
 		ItemType.ACCESSORY: return "res://assets/pixel/item_accessory.png"
 		ItemType.PARTS: return "res://assets/pixel/item_parts.png"
+		ItemType.COMPANION: return "res://assets/pixel/item_companion.png"
 		_: return "res://assets/pixel/item_potion.png"

@@ -25,8 +25,10 @@ func _setup_visuals() -> void:
 	spr.texture = PixelLoader.load_texture(_get_boss_texture_path())
 	spr.name = "Visual"
 	if spr.texture != null:
-		var target := 40.0
-		spr.scale = Vector2(target / spr.texture.get_width(), target / spr.texture.get_height())
+		spr.scale = Vector2(1.2, 1.2)
+		spr.hframes = ANIM_HFRAMES
+		spr.vframes = ANIM_VFRAMES
+	_visual_ref = spr
 	add_child(spr)
 	# Add glow ring (kept as a translucent ColorRect — it's a glow effect, not a sprite)
 	var ring = ColorRect.new()

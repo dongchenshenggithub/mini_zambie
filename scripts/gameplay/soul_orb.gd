@@ -25,6 +25,14 @@ func _setup_visuals() -> void:
 		var target := 14.0
 		spr.scale = Vector2(target / spr.texture.get_width(), target / spr.texture.get_height())
 	add_child(spr)
+	# The orb is an Area2D that grants XP on contact with the player, but it had
+	# NO collision shape — so body_entered never fired and the +10 XP per kill
+	# was silently lost. Add a small circle shape so collection actually works.
+	var col := CollisionShape2D.new()
+	var shape := CircleShape2D.new()
+	shape.radius = 10.0
+	col.shape = shape
+	add_child(col)
 
 
 func _physics_process(delta: float) -> void:

@@ -7,6 +7,7 @@ const LimbRegistry = preload("res://scripts/systems/limb_registry.gd")
 const AccessoryRegistry = preload("res://scripts/systems/accessory_registry.gd")
 const PixelLoader = preload("res://scripts/core/pixel_loader.gd")
 const PickupItemScript = preload("res://scripts/gameplay/pickup_item.gd")
+const DamageNumberScript = preload("res://scripts/ui/damage_number.gd")
 
 @export var base_health: float = 100.0
 @export var base_speed: float = 50.0
@@ -21,6 +22,19 @@ var _base_modulate: Color = Color.WHITE
 
 var state: State = State.CHASE
 var target_player: Player = null
+
+## --- animation state machine (spritesheet 4x4) ---
+var _visual_ref: Sprite2D = null
+var _anim_state: String = "walk"
+var _anim_frame: int = 0
+var _anim_timer: float = 0.0
+var _hurt_timer: float = 0.0
+
+const ANIM_HFRAMES := 4
+const ANIM_VFRAMES := 4
+const _ANIM_ROW := {"idle": 0, "walk": 1, "attack": 2, "hurt": 3}
+const _ANIM_FRAMES := {"idle": 2, "walk": 4, "attack": 3, "hurt": 2}
+const _ANIM_FPS := {"idle": 2.0, "walk": 8.0, "attack": 10.0, "hurt": 12.0}
 
 enum State { CHASE, ATTACK, STUNNED, FROZEN }
 
@@ -56,8 +70,10 @@ func _setup_visuals() -> void:
 	spr.texture = PixelLoader.load_texture(_get_zombie_texture_path())
 	spr.name = "Visual"
 	if spr.texture != null:
-		var target := 24.0
-		spr.scale = Vector2(target / spr.texture.get_width(), target / spr.texture.get_height())
+		spr.scale = Vector2(0.65, 0.65)
+		spr.hframes = ANIM_HFRAMES
+		spr.vframes = ANIM_VFRAMES
+	_visual_ref = spr
 	if zombie_type == GameEnums.ZombieType.HOLOGRAM:
 		# Baked scanline alpha already makes it translucent; tint cyan for projection look.
 		spr.modulate = Color(0.7, 1.0, 1.0, 0.85)
@@ -135,6 +151,7 @@ func _physics_process(delta: float) -> void:
 	if state == State.STUNNED or state == State.FROZEN:
 		velocity = Vector2.ZERO
 		move_and_slide()
+		_update_animation(delta)
 		return
 
 	if target_player == null:
@@ -153,15 +170,75 @@ func _physics_process(delta: float) -> void:
 		if dist < 40.0:
 			target_player.take_damage(current_damage * delta)
 
+	# Advance hurt timer
+	if _hurt_timer > 0:
+		_hurt_timer -= delta
+
+	_update_animation(delta)
+
+
+## Animation state machine — picks idle / walk / attack / hurt based on
+## game state and advances the Sprite2D frame within the spritesheet row.
+func _update_animation(delta: float) -> void:
+	if _visual_ref == null or _visual_ref.texture == null:
+		return
+
+	# Determine desired animation state (priority order).
+	var anim := "walk"
+	if _hurt_timer > 0:
+		anim = "hurt"
+	elif target_player:
+		var dist = global_position.distance_to(target_player.global_position)
+		if dist < 45.0:
+			anim = "attack"
+	elif state == State.STUNNED or state == State.FROZEN:
+		anim = "idle"
+
+	# Reset frame counter when state changes.
+	if anim != _anim_state:
+		_anim_state = anim
+		_anim_frame = 0
+		_anim_timer = 0.0
+		_visual_ref.frame = _ANIM_ROW[anim] * ANIM_HFRAMES
+
+	# Advance frame at the animation's fps.
+	_anim_timer -= delta
+	if _anim_timer <= 0.0:
+		_anim_timer = 1.0 / _ANIM_FPS[anim]
+		var fc: int = _ANIM_FRAMES[anim]
+		_anim_frame = (_anim_frame + 1) % fc
+		_visual_ref.frame = _ANIM_ROW[anim] * ANIM_HFRAMES + _anim_frame
+
 
 func take_damage(amount: float) -> void:
 	current_health -= amount
+	_hurt_timer = 0.15
+	# Floating damage number for the player to read. Big hits (>=15% of max
+	# HP) render as gold crit-style numbers. Added to the live scene so it
+	# survives the zombie dying on this same hit.
+	var is_big := amount >= base_health * 0.15
+	_spawn_damage_number(amount, is_big)
 	if current_health <= 0:
 		die()
 
 
+## Spawn a DamageNumber in world space above this zombie.
+func _spawn_damage_number(amount: float, is_big: bool) -> void:
+	if amount <= 0.0:
+		return
+	var dn = DamageNumberScript.new()
+	var scene = get_tree().current_scene
+	if scene != null:
+		scene.add_child(dn)
+		dn.setup(global_position, amount, is_big)
+	elif get_parent() != null:
+		get_parent().add_child(dn)
+		dn.setup(global_position, amount, is_big)
+
+
 ## Quick white/red flash so the player sees a bullet connect.
 func flash_hit() -> void:
+	_hurt_timer = 0.15
 	var vis = get_node_or_null("Visual")
 	if vis == null:
 		return
@@ -175,6 +252,9 @@ func die() -> void:
 	if xp_sys:
 		xp_sys.gain_xp(xp_reward)
 	Game.score += xp_reward
+	# Souls are the shop currency — earned on every kill, scaled down from the
+	# XP reward so a floor's worth of kills buys a few items rather than dozens.
+	Game.souls += max(1, roundi(xp_reward * 0.3))
 	Game.kills += 1
 	SfxManager.play("enemy_die")
 	# Notify the player's class behavior (e.g. Alien Shooter heals on kills).
@@ -198,16 +278,20 @@ func _drop_loot() -> void:
 	orb.global_position = global_position
 	scene.add_child(orb)
 
-	# Random drops. Equipment (weapon+accessory+parts) = 45% of kills.
+	# Random drops. Raised after feedback that weapons/equipment felt too
+	# scarce to build a loadout: weapon 6%, accessory 5%, parts 3%, companion
+	# (护卫) 4%, potion 12%. Soul orbs (XP) are unaffected.
 	var roll = randf()
 	if roll < 0.12:
 		_add_drop(scene, PickupItemScript.ItemType.POTION)
-	elif roll < 0.27:
+	elif roll < 0.18:
 		_add_drop(scene, PickupItemScript.ItemType.WEAPON)
-	elif roll < 0.42:
+	elif roll < 0.23:
 		_add_drop(scene, PickupItemScript.ItemType.ACCESSORY)
-	elif roll < 0.57:
+	elif roll < 0.26:
 		_add_drop(scene, PickupItemScript.ItemType.PARTS)
+	elif roll < 0.30:
+		_add_drop(scene, PickupItemScript.ItemType.COMPANION)
 
 
 ## Spawn a PickupItem of the given type at a slight random offset. Accessories

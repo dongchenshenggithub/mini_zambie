@@ -26,10 +26,22 @@ const BossExperimentAlphaScript = preload("res://scripts/entities/zombie/boss_ex
 @export var max_zombies_on_screen: int = 30
 @export var spawn_radius_min: float = 400.0
 @export var spawn_radius_max: float = 600.0
-## Survive-mode: a floor ends when this many seconds have elapsed — NOT when a
-## fixed number of zombies is killed. Waves keep spawning indefinitely until the
-## timer runs out (difficulty escalates, capped by max_zombies_on_screen).
-@export var floor_duration: float = 90.0
+## Survive-mode: a floor ends when its timer elapses — NOT when a fixed number of
+## zombies is killed. Waves keep spawning indefinitely until the timer runs out
+## (difficulty escalates, capped by max_zombies_on_screen).
+##
+## Floor duration scales linearly per floor, computed in start_floor():
+##   floor 1 = base_floor_duration, +floor_duration_step for each later floor.
+##   e.g. base 40 + step 5  ->  40, 45, 50, ...  (floor 14 = 105s)
+## The final (boss) floor is infinite: GameScene sets is_infinite and the timer is
+## disabled, so waves spawn endlessly until the boss is defeated.
+@export var base_floor_duration: float = 40.0
+@export var floor_duration_step: float = 5.0
+var floor_duration: float = 40.0
+## Disabled floor timer (set by GameScene on the boss floor). When true, the
+## spawner never emits floor_cleared and waves spawn forever — the floor ends
+## only when the boss dies.
+var is_infinite: bool = false
 
 var _spawn_timer: float = 0.0
 var _wave_number: int = 0
@@ -49,10 +61,14 @@ func _ready() -> void:
 
 
 func get_time_remaining() -> float:
+	if is_infinite:
+		return INF
 	return maxf(0.0, floor_duration - _floor_time)
 
 
 func get_floor_progress() -> float:
+	if is_infinite:
+		return 0.0
 	return clampf(_floor_time / floor_duration, 0.0, 1.0)
 
 
@@ -87,11 +103,25 @@ func start_waving() -> void:
 
 
 func start_floor() -> void:
+	if is_infinite:
+		# Endless waves; the floor ends when the boss is defeated, not on a timer.
+		floor_duration = INF
+	else:
+		# Linear per-floor duration: floor 1 = base, +step for each later floor.
+		floor_duration = base_floor_duration + (Game.current_floor - 1) * floor_duration_step
 	_waves_this_floor = 0
 	_wave_number = 0
 	_floor_time = 0.0
 	_spawn_timer = 0.0
 	_floor_active = true
+
+
+## Boss / final-floor mode: re-arm the spawner in endless mode. Regular zombie
+## waves keep coming alongside the boss until it dies (triggering victory).
+func start_infinite() -> void:
+	is_infinite = true
+	_is_waving = true
+	start_floor()
 
 
 func stop_waving() -> void:

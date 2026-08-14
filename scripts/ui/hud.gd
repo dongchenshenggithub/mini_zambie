@@ -99,7 +99,10 @@ func _process(delta: float) -> void:
 		else:
 			var ws = get_tree().get_first_node_in_group("wave_spawner") as WaveSpawner
 			if ws:
-				_floor_timer_label.text = "存活时间: %.0f s" % ws.get_time_remaining()
+				if ws.is_infinite:
+					_floor_timer_label.text = "无限模式 — 生存！"
+				else:
+					_floor_timer_label.text = "存活时间: %.0f s" % ws.get_time_remaining()
 
 	if player and player.inventory:
 		var dur_text := ""

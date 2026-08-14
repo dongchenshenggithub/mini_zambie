@@ -23,5 +23,7 @@ id = "cat_cafe_worker"
 name = "猫咖店员"
 build_direction = 2
 initial_weapon_id = "drone"
+initial_weapon_ids = PackedStringArray("pistol", "drone")
 description = "输出靠随从，可给随从装备武器。随从数量与智力成正比。"
 limb_slots = [2, 3, 4, 5]
+max_weapons = 2

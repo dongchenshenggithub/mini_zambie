@@ -4,20 +4,29 @@ extends CharacterBody2D
 
 const PixelLoader = preload("res://scripts/core/pixel_loader.gd")
 const AccessoryDataScript = preload("res://scripts/accessory_data.gd")
+const WorldHealthBarScript = preload("res://scripts/ui/world_health_bar.gd")
 
 const BASE_SPEED: float = 200.0
 
 @export var stats: PlayerStats = PlayerStats.new()
 @export var inventory: WeaponInventory
 @export var prosthetic_manager: ProstheticManager
-@export var character_data: CharacterEntry
+var character_data: CharacterEntry = null:
+	set(v):
+		_character_data = v
+		_refresh_character_visual()
+	get:
+		return _character_data
+var _character_data: CharacterEntry = null
 
 var behavior: CharacterBehavior = null
 ## Display-only list of equipped accessories (their stat bonuses are merged into
 ## character_data/stats; this list lets the status panel show what was equipped).
 var equipped_accessories: Array[AccessoryDataScript] = []
 var _visual: Sprite2D = null
+var _visual_class: int = -1
 var _weapon_visual: Sprite2D = null
+var _health_bar = null  # WorldHealthBar instance (typed at runtime)
 var _aim_dir: Vector2 = Vector2.RIGHT
 var _flash_timer: float = 0.0
 var _original_color: Color = Color.WHITE
@@ -64,13 +73,18 @@ func _setup_visuals() -> void:
 	vis.name = "Visual"
 	add_child(vis)
 	_create_weapon_visual()
+	# Health bar floating above the player's head (world space).
+	_health_bar = WorldHealthBarScript.new()
+	_health_bar.name = "HealthBar"
+	add_child(_health_bar)
+	_update_health_bar()
 
 
 ## Held-weapon sprite that aims toward the nearest zombie.
 func _create_weapon_visual() -> void:
 	_weapon_visual = Sprite2D.new()
 	_weapon_visual.name = "WeaponVisual"
-	_weapon_visual.scale = Vector2(1.1, 1.1)
+	_weapon_visual.scale = Vector2(0.55, 0.55)
 	_weapon_visual.visible = false
 	add_child(_weapon_visual)
 	_refresh_weapon_visual()
@@ -158,16 +172,33 @@ func _create_player_visual() -> Sprite2D:
 	var cls: int = 0
 	if character_data:
 		cls = character_data.character_class
+	_visual_class = cls
 	var tex = PixelLoader.load_texture("res://assets/pixel/player_%d.png" % cls)
 	if tex != null:
 		_visual.texture = tex
 	_visual.hframes = ANIM_HFRAMES
 	_visual.vframes = ANIM_VFRAMES
 	_visual.frame = 0
-	_visual.scale = Vector2(1.3, 1.3)
+	_visual.scale = Vector2(0.65, 0.65)
 	_visual.modulate = _original_color
 	_visual.visible = true
 	return _visual
+
+
+## Re-applies the correct character spritesheet when character_data is assigned
+## after the visual was already built (e.g. assigned post-_ready).
+func _refresh_character_visual() -> void:
+	if _visual == null:
+		return
+	var cls: int = 0
+	if character_data:
+		cls = character_data.character_class
+	_visual_class = cls
+	var tex = PixelLoader.load_texture("res://assets/pixel/player_%d.png" % cls)
+	if tex != null:
+		_visual.texture = tex
+	_visual.hframes = ANIM_HFRAMES
+	_visual.vframes = ANIM_VFRAMES
 
 
 func _physics_process(delta: float) -> void:
@@ -254,6 +285,7 @@ func _apply_character_traits() -> void:
 		stats.self_heal_rate = character_data.heal_rate
 		inventory.build_direction = character_data.build_direction
 		inventory.max_followers = character_data.max_followers
+		inventory.max_weapons = character_data.max_weapons
 		prosthetic_manager.is_mech_monk = (character_data.character_class == 1)
 	# Derive combat stats (multipliers/speed/armor/crit) from the base attributes
 	# so that attribute upgrades actually change how the player fights.
@@ -261,6 +293,8 @@ func _apply_character_traits() -> void:
 
 
 func _create_behavior() -> void:
+	if behavior != null:
+		return
 	if character_data:
 		behavior = BehaviorFactory.create_behavior(
 			character_data.character_class, self, character_data
@@ -302,6 +336,7 @@ func recompute_combat_stats() -> void:
 	stats.damage_multiplier_summon += stats.accessory_summon_mult
 	stats.damage_multiplier_spray += stats.accessory_spray_mult
 	stats.crit_bonus += stats.accessory_crit_bonus
+	_update_health_bar()
 
 
 func take_damage(amount: float) -> void:
@@ -310,6 +345,7 @@ func take_damage(amount: float) -> void:
 	if behavior:
 		behavior.on_player_take_damage(amount)
 	var _actual = stats.take_damage(amount)
+	_update_health_bar()
 	if not stats.is_alive():
 		if behavior:
 			behavior.on_player_die()
@@ -319,3 +355,10 @@ func take_damage(amount: float) -> void:
 
 func heal(amount: float) -> void:
 	stats.heal(amount)
+	_update_health_bar()
+
+
+## Push current/max HP into the floating health bar above the player's head.
+func _update_health_bar() -> void:
+	if _health_bar != null and stats != null:
+		_health_bar.set_health(stats.current_health, stats.max_health)
