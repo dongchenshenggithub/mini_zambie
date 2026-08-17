@@ -281,6 +281,8 @@ func show_shop() -> void:
 
 
 func _refresh_stock() -> void:
+	if _grid == null:
+		return
 	_stock = roll_stock()
 	for c in _grid.get_children():
 		c.queue_free()
@@ -307,7 +309,6 @@ func _build_card(entry: Dictionary) -> PanelContainer:
 		icon.custom_minimum_size = Vector2(40, 40)
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
-		icon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(icon)
 
 	var name_l := Label.new()

@@ -37,6 +37,9 @@ var _original_color: Color = Color.WHITE
 ## reads it in a frame — leaving only one of several weapons able to fire).
 var _fire_held: bool = false
 var _fire_just_pressed: bool = false
+## Last touch position in viewport space; used as a fallback for _aim_dir
+## when no mouse events are present (touchscreen devices).
+var _last_touch_pos: Vector2 = Vector2.ZERO
 
 ## --- animation state machine (spritesheet 4x4) ---
 const ANIM_HFRAMES := 4
@@ -125,8 +128,12 @@ func _weapon_icon_path(cat: int) -> String:
 
 ## Points the held weapon at the mouse cursor (keeps last direction as a
 ## fallback when the cursor sits right on top of the player).
+## On touchscreens `get_global_mouse_position()` returns (0,0), so we also
+## track the last touch position here and use it as a fallback.
 func _compute_aim_dir() -> void:
 	var mp := get_global_mouse_position()
+	if _last_touch_pos != Vector2.ZERO:
+		mp = _last_touch_pos
 	if global_position.distance_to(mp) > 1.0:
 		_aim_dir = (mp - global_position).normalized()
 
@@ -159,12 +166,12 @@ func _update_animation(delta: float) -> void:
 		_visual.frame = _ANIM_ROW[state] * ANIM_HFRAMES
 
 	# Advance frame at the animation's fps.
-		_anim_timer -= delta
+	_anim_timer -= delta
 	if _anim_timer <= 0.0:
-			_anim_timer = 1.0 / _ANIM_FPS[state]
-			var fc: int = _ANIM_FRAMES[state]
-			_anim_frame = (_anim_frame + 1) % fc
-			_visual.frame = _ANIM_ROW[state] * ANIM_HFRAMES + _anim_frame
+		_anim_timer = 1.0 / _ANIM_FPS[state]
+		var fc: int = _ANIM_FRAMES[state]
+		_anim_frame = (_anim_frame + 1) % fc
+		_visual.frame = _ANIM_ROW[state] * ANIM_HFRAMES + _anim_frame
 
 
 func _create_player_visual() -> Sprite2D:
@@ -261,6 +268,10 @@ func _physics_process(delta: float) -> void:
 ## inside _physics_process. Reliable for both quick clicks and held fire, and
 ## works for keyboard (Space) and gamepad as well as the mouse.
 func _input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		_last_touch_pos = event.position
+	elif event is InputEventScreenDrag:
+		_last_touch_pos = event.position
 	if event.is_action_pressed("fire") and not event.is_echo():
 		_fire_held = true
 		_fire_just_pressed = true

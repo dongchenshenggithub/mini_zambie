@@ -70,6 +70,11 @@ func _physics_process(delta: float) -> void:
 			_attack()
 		_attack_timer = _attack_rate
 
+	if _hp <= 0:
+		_respawn_timer -= delta
+		if _respawn_timer <= 0:
+			_hp = 100.0
+
 	if follow_owner and owner_node:
 		if attack_style == 1:
 			_orbit_and_guard(delta)

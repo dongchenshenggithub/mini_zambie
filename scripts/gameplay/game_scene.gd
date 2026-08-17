@@ -30,6 +30,9 @@ var _inventory_open: bool = false
 var _pending_level_ups: int = 0
 var _transitioning: bool = false
 var run_start_time: int = 0
+## Tracks whether the cursor is currently captured so we can release and
+## re-capture it when overlays open and close.
+var _mouse_captured: bool = false
 ## Current floor bounds (centred on the origin). The player clamps its position
 ## to this rect; the camera limits its view to it so neither can leave the
 ## background art.
@@ -70,6 +73,7 @@ func _ready() -> void:
 	wave_spawner.floor_cleared.connect(_on_floor_cleared)
 	if _is_boss_floor:
 		_spawn_boss()
+	_capture_mouse()
 
 
 func _setup_player() -> void:
@@ -209,6 +213,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		# have a no-op on_special_ability, so this is safe for everyone.
 		if player and player.behavior and player.behavior.has_method("on_special_ability"):
 			player.behavior.on_special_ability(self)
+	if event.is_action_pressed("fullscreen") and not get_tree().paused:
+		DisplayServer.window_set_mode(
+			DisplayServer.WINDOW_MODE_FULLSCREEN if DisplayServer.window_get_mode() != DisplayServer.WINDOW_MODE_FULLSCREEN
+			else DisplayServer.WINDOW_MODE_WINDOWED
+		)
 
 
 func _toggle_pause() -> void:
@@ -217,6 +226,7 @@ func _toggle_pause() -> void:
 	var pm = preload("res://scripts/gameplay/pause_menu.gd").new()
 	_add_overlay(pm)
 	get_tree().paused = true
+	_release_mouse()
 
 
 ## Opens the character/inventory status panel (hotkey: I or C) and pauses the
@@ -227,6 +237,7 @@ func _open_status_panel() -> void:
 	var panel = preload("res://scripts/ui/character_panel.gd").new()
 	_add_overlay(panel)
 	get_tree().paused = true
+	_release_mouse()
 
 
 ## Opens the weapon/companion inventory panel (hotkey: B). Pauses the run so the
@@ -240,6 +251,7 @@ func _open_inventory_panel() -> void:
 	panel.tree_exiting.connect(func(): _inventory_open = false)
 	_add_overlay(panel)
 	get_tree().paused = true
+	_release_mouse()
 
 
 func _on_floor_cleared(_floor: int) -> void:
@@ -285,10 +297,12 @@ func _open_shop(after_close: Callable) -> void:
 	_add_overlay(shop)
 	shop.shop_closed.connect(_on_shop_closed.bind(after_close))
 	shop.show_shop()
+	_release_mouse()
 
 
 func _on_shop_closed(after_close: Callable) -> void:
 	_shop_open = false
+	_capture_mouse()
 	after_close.call()
 
 
@@ -296,6 +310,7 @@ func _advance_floor_and_resume() -> void:
 	_advance_floor()
 	_transitioning = false
 	get_tree().paused = false
+	_capture_mouse()
 
 
 func _advance_floor() -> void:
@@ -382,6 +397,7 @@ func _on_player_died() -> void:
 	var ds = DeathScreenScript.create(Game.score, Game.current_floor, Game.kills, survived_ms, char_name)
 	_add_overlay(ds)
 	get_tree().paused = true
+	_release_mouse()
 
 
 
@@ -431,3 +447,25 @@ func _on_upgrade_chosen(upgrade_data: Dictionary, picker: UpgradePicker, panel: 
 	picker.queue_free()
 	_upgrade_open = false
 	_try_open_upgrade_panel()
+
+
+## Captures the mouse cursor so touchpad movement controls aiming.
+func _capture_mouse() -> void:
+	if _mouse_captured:
+		return
+	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	_mouse_captured = true
+
+
+## Releases the mouse cursor so the player can interact with overlays / OS.
+func _release_mouse() -> void:
+	if not _mouse_captured:
+		return
+	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	_mouse_captured = false
+
+
+func _process(_delta: float) -> void:
+	# Re-capture the mouse whenever no overlay is holding it open.
+	if _mouse_captured and not _shop_open and not _inventory_open and not _upgrade_open and not get_tree().paused:
+		_capture_mouse()

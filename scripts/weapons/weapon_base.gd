@@ -25,6 +25,9 @@ var equipped_weapon_index: int = 0
 ## When true the weapon fires on its own (autonomous summons). Player-held
 ## weapons leave this false and only fire while the fire input is held.
 var auto_fire: bool = false
+## Auto-aim mode: weapon automatically targets nearest enemy and fires.
+## Player only needs to move — no clicking required.
+var auto_aim: bool = true
 
 ## Fire behaviour. AUTO = hold to keep firing (gated by fire_rate).
 ## SEMI = one shot per click; tapping faster fires faster up to fire_rate.
@@ -89,14 +92,17 @@ func _physics_process(delta: float) -> void:
 		return
 
 	_fire_cooldown -= delta
-	# Decide whether the player (or auto-fire) wants to shoot this frame. The
-	# fire state is buffered by the player, not read from Input here.
-	# Both AUTO and SEMI fire WHILE the button is held (gated by fire_rate) and
-	# on the initial click edge. This keeps several bullets in flight at once
-	# instead of "one at a time, next only after the previous disappears" — a
-	# single tap still yields exactly one shot because just_pressed fires once
-	# and the cooldown then respects fire_rate.
-	var want := auto_fire or _fire_held or _fire_just_pressed
+	# Decide whether to fire. Auto-aim weapons fire at nearest enemy in range.
+	# Normal weapons use buffered input from player.
+	var want := false
+	if auto_aim:
+		# Auto-aim: fire when there's an enemy in range
+		if _get_nearest_enemy() != null and _fire_cooldown <= 0.0:
+			want = true
+	elif _fire_held or _fire_just_pressed:
+		# Manual mode: use player input
+		want = true
+
 	if _fire_cooldown <= 0.0 and want:
 		if try_fire(delta):
 			_fire_cooldown = 1.0 / fire_rate
@@ -257,10 +263,36 @@ func _melee_trail_color() -> Color:
 
 ## Direction bullets travel. Player-held weapons follow the mouse via the
 ## player's aim; override per-weapon only if a different rule is needed.
+## When auto_aim is enabled, automatically aim at the nearest enemy.
 func _get_attack_direction() -> Vector2:
+	if auto_aim and weapon_owner != null:
+		var nearest = _get_nearest_enemy()
+		if nearest != null:
+			var dir = (nearest.global_position - weapon_owner.global_position).normalized()
+			return dir
 	if weapon_owner != null:
 		return weapon_owner.get_aim_dir()
 	return Vector2.RIGHT
+
+
+## Find the nearest zombie to the weapon owner within the weapon's range.
+func _get_nearest_enemy() -> ZombieBase:
+	if weapon_owner == null:
+		return null
+	var tree = weapon_owner.get_tree()
+	if tree == null:
+		return null
+	var owner_pos = weapon_owner.global_position
+	var nearest: ZombieBase = null
+	var nearest_dist := range
+	for zombie in tree.get_nodes_in_group("zombie"):
+		var zb = zombie as ZombieBase
+		if zb and zb.is_inside_tree():
+			var dist = zb.global_position.distance_to(owner_pos)
+			if dist < nearest_dist:
+				nearest_dist = dist
+				nearest = zb
+	return nearest
 
 
 func take_damage_from_zombie() -> void:
