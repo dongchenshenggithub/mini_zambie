@@ -9,6 +9,8 @@ func _init() -> void:
 	damage = 15.0
 	fire_rate = 4.0
 	range = 60.0
+	effect = GameEnums.StatusEffect.BLEED
+	effect_duration = 3.0
 
 
 func fire() -> void:
@@ -19,3 +21,5 @@ func fire() -> void:
 			var dist = z.global_position.distance_to(owner_pos)
 			if dist <= range:
 				z.take_damage(get_final_damage())
+				if effect != GameEnums.StatusEffect.NONE:
+					z.apply_status(effect, effect_duration)

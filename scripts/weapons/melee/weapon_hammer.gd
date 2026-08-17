@@ -9,6 +9,7 @@ func _init() -> void:
 	damage = 30.0
 	fire_rate = 0.8
 	range = 100.0
+	knockback_force = 400.0
 
 
 func fire() -> void:
@@ -19,3 +20,6 @@ func fire() -> void:
 			var dist = z.global_position.distance_to(owner_pos)
 			if dist <= range:
 				z.take_damage(get_final_damage())
+				if knockback_force > 0:
+					var kb_dir = (z.global_position - owner_pos).normalized()
+					z.apply_knockback(kb_dir * knockback_force)

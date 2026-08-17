@@ -16,6 +16,7 @@ extends Node2D
 @export var splash_radius: float = 0.0
 @export var effect: GameEnums.StatusEffect = GameEnums.StatusEffect.NONE
 @export var effect_duration: float = 0.0
+@export var knockback_force: float = 0.0  # Applies knockback on melee hit
 
 var _fire_cooldown: float = 0.0
 var durability: float = 100.0

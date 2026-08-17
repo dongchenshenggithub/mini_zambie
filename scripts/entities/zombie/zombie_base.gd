@@ -176,6 +176,13 @@ func _physics_process(delta: float) -> void:
 
 	_update_animation(delta)
 
+	# Bleed damage over time
+	if _bleed_timer > 0:
+		_bleed_timer -= delta
+		take_damage(_bleed_damage * delta)
+		if _bleed_timer <= 0:
+			_bleed_damage = 0.0
+
 
 ## Animation state machine — picks idle / walk / attack / hurt based on
 ## game state and advances the Sprite2D frame within the spritesheet row.
@@ -327,6 +334,23 @@ func apply_status(effect: GameEnums.StatusEffect, duration: float) -> void:
 			await get_tree().create_timer(duration).timeout
 			if is_inside_tree():
 				state = State.CHASE
+		GameEnums.StatusEffect.BLEED:
+			# Bleed: damage over time, stacks
+			_bleed_timer = duration
+			_bleed_damage = base_health * 0.02
+		GameEnums.StatusEffect.SLOW:
+			var old_speed = current_speed
+			current_speed *= 0.6
+			await get_tree().create_timer(duration).timeout
+			if is_inside_tree():
+				current_speed = old_speed
+		GameEnums.StatusEffect.ARMOR_DOWN:
+			# Reduce zombie effective armor (placeholder)
+			pass
+
+
+var _bleed_timer: float = 0.0
+var _bleed_damage: float = 0.0
 
 
 func apply_knockback(direction: Vector2) -> void:
