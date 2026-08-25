@@ -27,9 +27,3 @@ func fire() -> void:
 	rocket.effect = effect
 	rocket.effect_duration = effect_duration
 	get_tree().current_scene.add_child(rocket)
-
-
-func _get_attack_direction() -> Vector2:
-	if weapon_owner != null:
-		return weapon_owner.get_aim_dir()
-	return Vector2.RIGHT

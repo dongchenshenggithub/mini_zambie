@@ -28,9 +28,3 @@ func fire() -> void:
 		proj.pierce = 0
 		proj.splash_radius = splash_radius
 		get_tree().current_scene.add_child(proj)
-
-
-func _get_attack_direction() -> Vector2:
-	if weapon_owner != null:
-		return weapon_owner.get_aim_dir()
-	return Vector2.RIGHT

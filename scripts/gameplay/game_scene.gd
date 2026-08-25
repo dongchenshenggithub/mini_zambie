@@ -440,12 +440,15 @@ func _open_upgrade_panel() -> void:
 	_add_overlay(panel)
 	panel.option_chosen.connect(_on_upgrade_chosen.bind(picker, panel))
 	panel.show_options(options)
+	# Release mouse so player can click upgrade options
+	_release_mouse()
 
 
 func _on_upgrade_chosen(upgrade_data: Dictionary, picker: UpgradePicker, panel: UpgradePanelScript) -> void:
 	picker.apply_upgrade(upgrade_data, player)
 	picker.queue_free()
 	_upgrade_open = false
+	_capture_mouse()
 	_try_open_upgrade_panel()
 
 

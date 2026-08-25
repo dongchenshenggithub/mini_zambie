@@ -25,9 +25,3 @@ func fire() -> void:
 	bolt.range = range
 	bolt.pierce = pierce
 	get_tree().current_scene.add_child(bolt)
-
-
-func _get_attack_direction() -> Vector2:
-	if weapon_owner != null:
-		return weapon_owner.get_aim_dir()
-	return Vector2.RIGHT
