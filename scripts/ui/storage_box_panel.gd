@@ -1,6 +1,4 @@
 ## Between-floor shop/upgrade panel.
-## Shows all weapons and accessories in the storage box.
-## Player can equip, sell, or upgrade items.
 extends CanvasLayer
 class_name StorageBoxPanel
 
@@ -12,13 +10,8 @@ const StorageBox = preload("res://scripts/systems/storage_box.gd")
 const WeaponInventory = preload("res://scripts/entities/player/weapon_inventory.gd")
 const PixelLoader = preload("res://scripts/core/pixel_loader.gd")
 
-const UpgradeOptionCardScript = preload("res://scripts/ui/upgrade_option_card.gd")
-
 var _player: Player = null
 var _scene_root: Node = null
-var _grid: GridContainer = null
-var _weapon_panel: Panel = null
-var _accessory_panel: Panel = null
 var _soul_label: Label = null
 var _leave_btn: Button = null
 
@@ -35,7 +28,6 @@ func show_box() -> void:
 
 
 func _build_ui() -> void:
-	# Dark background
 	var bg := ColorRect.new()
 	bg.color = Color(0.02, 0.03, 0.06, 0.9)
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -49,9 +41,6 @@ func _build_ui() -> void:
 	var panel := Panel.new()
 	panel.custom_minimum_size = Vector2(900, 600)
 	center.add_child(panel)
-	var panel_tw := create_tween()
-	panel_tw.tween_property(panel, "modulate", Color(1, 1, 1, 1), 0.2)
-	panel.modulate = Color(1, 1, 1, 0)
 
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 24)
@@ -64,29 +53,24 @@ func _build_ui() -> void:
 	vbox.add_theme_constant_override("separation", 12)
 	margin.add_child(vbox)
 
-	# Title
 	var title := Label.new()
 	title.text = "储物箱 — 选择要携带的装备"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 26)
 	vbox.add_child(title)
 
-	# Souls display
 	_soul_label = Label.new()
 	_soul_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_soul_label.add_theme_font_size_override("font_size", 18)
 	_soul_label.add_theme_color_override("font_color", Color(0.6, 0.9, 1.0, 1.0))
 	vbox.add_child(_soul_label)
 
-	# Weapons section
 	_add_section(vbox, "武器")
 	_build_weapon_list(vbox)
 
-	# Accessories section
 	_add_section(vbox, "配件")
 	_build_accessory_list(vbox)
 
-	# Leave button
 	var btn_row := HBoxContainer.new()
 	btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	btn_row.add_theme_constant_override("separation", 16)
@@ -146,42 +130,35 @@ func _build_weapon_card(data: WeaponData, level: int) -> PanelContainer:
 	vbox.add_theme_constant_override("separation", 4)
 	card.add_child(vbox)
 
-	# Name and level
 	var name_label := Label.new()
 	name_label.text = "%s Lv.%d" % [data.name, level]
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.add_theme_font_size_override("font_size", 14)
 	vbox.add_child(name_label)
 
-	# Stats
 	var stats_label := Label.new()
-	var stats := "伤害 %d · 射速 %.1f" % [int(data.damage), data.fire_rate]
-	stats_label.text = stats
+	stats_label.text = "伤害 %d · 射速 %.1f" % [int(data.damage), data.fire_rate]
 	stats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	stats_label.add_theme_font_size_override("font_size", 10)
 	stats_label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8, 1.0))
 	vbox.add_child(stats_label)
 
-	# Buttons row
 	var btn_row := HBoxContainer.new()
 	btn_row.add_theme_constant_override("separation", 4)
 	vbox.add_child(btn_row)
 
-	# Equip button
 	var equip_btn := Button.new()
 	equip_btn.text = "装备"
 	equip_btn.custom_minimum_size = Vector2(50, 24)
 	equip_btn.pressed.connect(_on_equip_weapon.bind(data.id))
 	btn_row.add_child(equip_btn)
 
-	# Sell button
 	var sell_btn := Button.new()
 	sell_btn.text = "出售"
 	sell_btn.custom_minimum_size = Vector2(50, 24)
 	sell_btn.pressed.connect(_on_sell_weapon.bind(data.id))
 	btn_row.add_child(sell_btn)
 
-	# Upgrade button
 	var upgrade_btn := Button.new()
 	upgrade_btn.text = "升级"
 	upgrade_btn.custom_minimum_size = Vector2(50, 24)
@@ -228,14 +205,12 @@ func _build_accessory_card(data: AccessoryData, level: int) -> PanelContainer:
 	vbox.add_theme_constant_override("separation", 2)
 	card.add_child(vbox)
 
-	# Name
 	var name_label := Label.new()
 	name_label.text = "%s Lv.%d" % [data.name, level]
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.add_theme_font_size_override("font_size", 13)
 	vbox.add_child(name_label)
 
-	# Stats
 	var stats_label := Label.new()
 	var parts: Array[String] = []
 	if data.health_bonus > 0: parts.append("HP+%d" % int(data.health_bonus))
@@ -250,7 +225,6 @@ func _build_accessory_card(data: AccessoryData, level: int) -> PanelContainer:
 	stats_label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8, 1.0))
 	vbox.add_child(stats_label)
 
-	# Buttons row
 	var btn_row := HBoxContainer.new()
 	btn_row.add_theme_constant_override("separation", 4)
 	vbox.add_child(btn_row)
@@ -284,7 +258,6 @@ func _on_equip_weapon(weapon_id: String) -> void:
 	var weapon = WeaponRegistry.spawn_instance(data)
 	if weapon == null:
 		return
-	# Class behavior check
 	if _player.behavior:
 		_player.behavior.on_weapon_pickup(weapon)
 	if not is_instance_valid(weapon):
@@ -319,7 +292,6 @@ func _on_upgrade_weapon(weapon_id: String, current_level: int) -> void:
 	if Game.souls < upgrade_cost:
 		_toast("灵魂不足，需要 %d" % upgrade_cost)
 		return
-	# Find and upgrade the weapon instance
 	var inv = _player.inventory
 	var upgraded = false
 	for i in range(inv.weapons.size()):
@@ -344,7 +316,6 @@ func _on_equip_accessory(accessory_id: String) -> void:
 	var data = AccessoryRegistry.get_data(accessory_id)
 	if data == null:
 		return
-	# Apply accessory bonuses
 	var cd = _player.character_data
 	if cd == null:
 		return

@@ -17,7 +17,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 config/name="ZombieRoguelike"
 config/description="A roguelike zombie survival game"
 run/main_scene="res://scenes/menus/main_menu.tscn"
-config/features=PackedStringArray("4.7", "Forward Plus")
+config/features=PackedStringArray("4.6", "Forward Plus")
 
 [autoload]
 
@@ -31,7 +31,6 @@ window/size/viewport_width=1280
 window/size/viewport_height=720
 window/size/mode=2
 window/stretch/mode="viewport"
-window/stretch/aspect="keep"
 
 [input]
 
