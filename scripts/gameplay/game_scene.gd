@@ -9,7 +9,7 @@ const LimbRegistryScript = preload("res://scripts/systems/limb_registry.gd")
 const UpgradePanelScript = preload("res://scripts/ui/upgrade_panel.gd")
 const DeathScreenScript = preload("res://scripts/gameplay/death_screen.gd")
 const TransitionBannerScript = preload("res://scripts/ui/transition_banner.gd")
-const ShopPanelScript = preload("res://scripts/ui/shop_panel.gd")
+const StorageBoxPanelScript = preload("res://scripts/ui/storage_box_panel.gd")
 const MapGeneratorScript = preload("res://scripts/map/map_generator.gd")
 const FollowerManagerScript = preload("res://scripts/systems/follower_manager.gd")
 
@@ -64,6 +64,7 @@ func _ready() -> void:
 	PartRegistry.init()
 	LimbRegistryScript.init()
 	MapFloorRegistry.init()
+	StorageBox.init()
 
 	_setup_player()
 	_generate_map()
@@ -289,14 +290,14 @@ func _should_open_shop() -> bool:
 	return _shop_unlocked and current_floor < total_floors
 
 
-## Opens the shop overlay and advances the floor once the player leaves it.
+## Opens the storage box overlay and advances the floor once the player leaves it.
 func _open_shop(after_close: Callable) -> void:
 	_shop_open = true
-	var shop = ShopPanelScript.new()
-	shop.setup(self)
-	_add_overlay(shop)
-	shop.shop_closed.connect(_on_shop_closed.bind(after_close))
-	shop.show_shop()
+	var panel = StorageBoxPanelScript.new()
+	panel.setup(self, player)
+	_add_overlay(panel)
+	panel.box_closed.connect(_on_shop_closed.bind(after_close))
+	panel.show_box()
 	_release_mouse()
 
 
