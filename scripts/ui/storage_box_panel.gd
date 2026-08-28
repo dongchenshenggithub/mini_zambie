@@ -346,7 +346,7 @@ func _on_sell_accessory(accessory_id: String) -> void:
 	var data = AccessoryRegistry.get_data(accessory_id)
 	if data == null:
 		return
-	var sell_price = data.sell_price if data.has("sell_price") else max(1, data.soul_cost // 2)
+	var sell_price = data.sell_price\n\tif not data.has("sell_price"):\n\t\tsell_price = max(1, int(data.soul_cost / 2))
 	Game.souls += sell_price
 	StorageBox.remove_accessory(accessory_id)
 	_toast("出售 %s 获得 %d 灵魂" % [data.name, sell_price])
