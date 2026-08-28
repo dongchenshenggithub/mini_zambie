@@ -199,6 +199,28 @@ func _install_limb(player: Player) -> void:
 		_toast("义肢安装失败：%s" % limb.slot_name)
 
 
+func _add_companion() -> void:
+	var player = get_tree().get_first_node_in_group("player") as Player
+	if player == null or not player.stats.is_alive():
+		return
+	var cls: int = -1
+	if player.character_data != null:
+		cls = player.character_data.character_class
+	var fm = null
+	var gs = get_tree().current_scene
+	if gs != null and gs.has_method("get") and gs.get("follower_manager") != null:
+		fm = gs.get("follower_manager")
+	if fm == null or not fm.has_method("can_add") or not fm.can_add():
+		_toast("护卫栏已满")
+		return
+	var inv = player.inventory as WeaponInventory
+	if inv == null:
+		return
+	var cw = preload("res://scripts/weapons/companion_weapon.gd").new()
+	cw.weapon_name = "护卫"
+	inv.equip_weapon(cw)
+	_toast("装备护卫武器")
+
 func _toast(text: String) -> void:
 	var h = get_tree().get_first_node_in_group("hud") as HUD
 	if h and h.has_method("show_toast"):
