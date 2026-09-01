@@ -83,7 +83,9 @@ func _process(delta: float) -> void:
 
 	var xp_sys = get_tree().get_first_node_in_group("xp_system") as XPSystem
 	if xp_sys and xp_bar:
-		xp_bar.value = xp_sys.get_xp_progress()
+		var prog = xp_sys.get_xp_progress()
+		xp_bar.visible = prog > 0.001
+		xp_bar.value = prog
 		xp_bar.max_value = 1.0
 
 	if score_label:
