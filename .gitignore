@@ -1,5 +1,9 @@
 # Godot 4+ — editor/import caches are auto-generated, never commit them
 .godot/
-
+.godot/
+build/
+*.x86_64
+*.pck
+*.sh
 # Local agent/tooling memory (project-internal, not part of the game)
 .workbuddy/
